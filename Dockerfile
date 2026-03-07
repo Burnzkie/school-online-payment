@@ -16,10 +16,10 @@ ENV LOG_CHANNEL stderr
 ENV PHP_OPCACHE_ENABLE 1
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Optional: custom PHP config (uncomment if needed)
+# Optional: custom PHP config (uncomment if you add php.ini)
 # COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 
-# Copy deploy script and make it executable
+# Copy and prepare deploy script
 COPY scripts/00-laravel-deploy.sh /etc/cont-init.d/00-laravel-deploy.sh
 
 RUN chmod +x /etc/cont-init.d/00-laravel-deploy.sh
