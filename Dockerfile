@@ -17,7 +17,7 @@ ENV LOG_CHANNEL stderr
 ENV PHP_OPCACHE_ENABLE 1
 ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Optional: custom PHP config
+# Optional: custom PHP config (uncomment if you add a php.ini file)
 # COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 # Copy deploy script
