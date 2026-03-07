@@ -18,7 +18,7 @@ ENV COMPOSER_ALLOW_SUPERUSER 1
 
 # Optional custom PHP settings
 # COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
-
+COPY supervisord.conf /etc/supervisord.conf
 # Deploy script setup
 COPY scripts/00-laravel-deploy.sh /etc/cont-init.d/00-laravel-deploy.sh
 
