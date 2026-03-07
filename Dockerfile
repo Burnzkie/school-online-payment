@@ -5,18 +5,19 @@ COPY . .
 # Image config
 ENV SKIP_COMPOSER 1
 ENV WEBROOT /var/www/html/public
-ENV PHP_ERRORS_STDERR 1   # Logs PHP errors to stderr (visible in Render logs)
-ENV RUN_SCRIPTS 1         # Ensures /scripts/*.sh run if needed (backup to cont-init.d)
-ENV REAL_IP_HEADER 1      # Handles real client IPs behind Render's proxy
+ENV PHP_ERRORS_STDERR 1
+ENV RUN_SCRIPTS 1
+# Handles real client IPs behind Render's proxy (recommended)
+ENV REAL_IP_HEADER 1
 
 # Laravel-specific
-ENV APP_ENV production    # Sets Laravel to production mode
-ENV APP_DEBUG false       # Disables debug mode for security
-ENV LOG_CHANNEL stderr    # Logs to stderr (Render console)
+ENV APP_ENV production
+ENV APP_DEBUG false
+ENV LOG_CHANNEL stderr
 ENV PHP_OPCACHE_ENABLE 1
-ENV COMPOSER_ALLOW_SUPERUSER 1  # Allows Composer to run as root in container
+ENV COMPOSER_ALLOW_SUPERUSER 1
 
-# Add any custom PHP config if needed (optional)
+# Optional: custom PHP config
 # COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 # Copy deploy script
