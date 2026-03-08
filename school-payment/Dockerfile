@@ -5,10 +5,8 @@ FROM composer:2 AS composer
 
 WORKDIR /app
 
-# Copy only dependency files first → excellent layer caching
 COPY composer.json composer.lock* ./
 
-# Install production dependencies only – skip discovery/upgrade here
 RUN composer install \
     --no-dev \
     --no-interaction \
@@ -22,10 +20,8 @@ RUN composer install \
 # =============================================================================
 FROM php:8.3-apache
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies + PHP extensions (only what's truly needed)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libjpeg-dev \
@@ -52,14 +48,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && a2enmod rewrite \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy Composer dependencies from previous stage
 COPY --from=composer /app/vendor /var/www/html/vendor
 COPY --from=composer /app/composer.* /var/www/html/
 
-# Copy the rest of the application code
 COPY . .
 
-# Create minimal .env and strip any APP_KEY placeholder so Render's env var takes effect at runtime
+# Build a clean .env — strip APP_KEY entirely so no placeholder survives into the image
 RUN cp -n .env.example .env || true \
     && sed -i '/^APP_KEY=/d' .env \
     && echo "APP_ENV=production" >> .env \
@@ -72,26 +66,28 @@ RUN cp -n .env.example .env || true \
     && echo "DB_USERNAME=root" >> .env \
     && echo "DB_PASSWORD=" >> .env
 
-# Set Laravel/Filament production environment
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr
 
-# Prepare Laravel directories early (prevents permission/cache issues later)
 RUN mkdir -p storage/framework/{cache,sessions,views} \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# Set Apache to serve from Laravel's /public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Expose port (most platforms like Render expect 80)
 EXPOSE 80
 
-# At startup: inject APP_KEY from Render env var into .env, then boot
-CMD sed -i '/^APP_KEY=/d' .env \
+# At startup:
+# 1. Remove any leftover APP_KEY line (including placeholders like "php artisan key:generate --show")
+# 2. Write the real APP_KEY from Render's environment variable
+# 3. Fail loudly if APP_KEY is empty so the problem is obvious
+CMD if [ -z "${APP_KEY}" ]; then \
+        echo "ERROR: APP_KEY environment variable is not set!" && exit 1; \
+    fi \
+    && sed -i '/^APP_KEY=/d' .env \
     && echo "APP_KEY=${APP_KEY}" >> .env \
     && php artisan config:clear --ansi \
     && php artisan view:clear --ansi \
