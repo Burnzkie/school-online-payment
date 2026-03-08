@@ -1,6 +1,6 @@
 # Use official PHP with Apache (recommended for Laravel on Render)
 # Pick the version matching your app (e.g., 8.2, 8.3 — check composer.json "php" requirement)
-FROM php:8.3-apache
+FROM php:8.2-apache
 
 # Install system dependencies + common PHP extensions for Laravel
 RUN apt-get update && apt-get install -y \
