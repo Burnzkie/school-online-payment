@@ -7,6 +7,8 @@
         <h1 class="text-2xl font-bold text-gray-800">My Profile</h1>
         <a href="{{ route('treasurer.profile.edit') }}" class="btn-primary">✏️ Edit Profile</a>
     </div>
+
+    {{-- Avatar + Photo Upload --}}
     <div class="section-card p-6">
         <div class="flex items-center gap-5">
             @if(filled($user->profile_picture) && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->profile_picture))
@@ -20,7 +22,9 @@
                 </div>
             @endif
             <div>
-                <p class="text-xl font-bold text-gray-800">{{ $user->name }} {{ $user->middle_name }} {{ $user->last_name }}</p>
+                <p class="text-xl font-bold text-gray-800">
+                    {{ trim(($user->name ?? '') . ' ' . ($user->middle_name ?? '') . ' ' . ($user->last_name ?? '')) }}
+                </p>
                 <p class="text-sm mt-1 text-indigo-500 font-semibold">Treasurer</p>
                 <p class="text-xs mt-0.5 text-gray-400">{{ $user->email }}</p>
             </div>
@@ -33,16 +37,18 @@
             <button type="submit" class="btn-secondary">📷 Update Photo</button>
         </form>
     </div>
+
+    {{-- Personal Information --}}
     <div class="section-card p-6">
-        <h3 class="text-sm font-bold text-gray-800 mb-4">Account Information</h3>
+        <h3 class="text-sm font-bold text-gray-800 mb-4">Personal Information</h3>
         <div class="grid grid-cols-2 gap-4 text-sm">
             @foreach([
-                ['Full Name', trim(($user->name ?? '') . ' ' . ($user->middle_name ?? '') . ' ' . ($user->last_name ?? ''))],
-                ['Email', $user->email],
-                ['Phone', $user->phone ?? '—'],
-                ['Role', 'Treasurer'],
-                ['Extra Info', $user->extra_info ?? '—'],
-                ['Member since', $user->created_at->format('F j, Y')],
+                ['First Name',   $user->name        ?? '—'],
+                ['Middle Name',  $user->middle_name  ?? '—'],
+                ['Last Name',    $user->last_name    ?? '—'],
+                ['Employee ID',  $user->employee_id  ?? '—'],
+                ['Role',         'Treasurer'],
+                ['Member Since', $user->created_at->format('F j, Y')],
             ] as [$label, $value])
             <div>
                 <p class="text-xs font-bold uppercase tracking-wider mb-1 text-gray-400">{{ $label }}</p>
@@ -51,5 +57,42 @@
             @endforeach
         </div>
     </div>
+
+    {{-- Contact Information --}}
+    <div class="section-card p-6">
+        <h3 class="text-sm font-bold text-gray-800 mb-4">Contact Information</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            @foreach([
+                ['Mobile Number', $user->phone      ?? '—'],
+                ['Work Email',    $user->work_email ?? '—'],
+                ['Login Email',   $user->email],
+            ] as [$label, $value])
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider mb-1 text-gray-400">{{ $label }}</p>
+                <p class="text-gray-800 font-semibold">{{ $value ?: '—' }}</p>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Address --}}
+    <div class="section-card p-6">
+        <h3 class="text-sm font-bold text-gray-800 mb-4">Address</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+            @foreach([
+                ['Street / Barangay',   $user->street       ?? '—'],
+                ['Municipality / City', $user->municipality ?? '—'],
+                ['Province',            $user->province     ?? '—'],
+                ['ZIP Code',            $user->zip_code     ?? '—'],
+                ['Country',             $user->country      ?? '—'],
+            ] as [$label, $value])
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider mb-1 text-gray-400">{{ $label }}</p>
+                <p class="text-gray-800 font-semibold">{{ $value ?: '—' }}</p>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
 </div>
 @endsection

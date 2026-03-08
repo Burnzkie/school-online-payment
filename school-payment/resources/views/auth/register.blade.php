@@ -469,6 +469,8 @@
                              TREASURER FIELDS
                         ══════════════════════════════════════ --}}
                         <div id="treasurer-form" class="mt-6 space-y-6 hidden">
+
+                            {{-- Personal Information --}}
                             <div class="border-t border-slate-700 pt-6">
                                 <h3 class="text-lg font-semibold mb-4 text-amber-400">
                                     <i class="fas fa-id-badge mr-2"></i>Treasurer Information
@@ -477,23 +479,109 @@
                                     <div>
                                         <label class="block text-sm font-medium mb-2">First Name *</label>
                                         <input type="text" name="name" value="{{ old('name') }}" required
-                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
                                                placeholder="First name" pattern="[A-Za-zÀ-ÿ\s]+" title="Only letters allowed">
                                     </div>
                                     <div>
+                                        <label class="block text-sm font-medium mb-2">Middle Name</label>
+                                        <input type="text" name="middle_name" value="{{ old('middle_name') }}"
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                               placeholder="Middle name">
+                                    </div>
+                                    <div class="col-span-2">
                                         <label class="block text-sm font-medium mb-2">Last Name *</label>
                                         <input type="text" name="last_name" value="{{ old('last_name') }}" required
-                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
                                                placeholder="Last name" pattern="[A-Za-zÀ-ÿ\s]+" title="Only letters allowed">
                                     </div>
                                 </div>
                                 <div class="mt-4">
                                     <label class="block text-sm font-medium mb-2">Employee ID *</label>
-                                    <input type="text" name="employee_id"
-                                           class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                    <input type="text" name="employee_id" value="{{ old('employee_id') }}"
+                                           class="w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
                                            placeholder="TR-2025-001">
                                 </div>
                             </div>
+
+                            {{-- Contact Information --}}
+                            <div class="border-t border-slate-700 pt-6">
+                                <h3 class="text-lg font-semibold mb-4 text-amber-400">
+                                    <i class="fas fa-phone mr-2"></i>Contact Information
+                                </h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">Mobile Number *</label>
+                                        <input type="tel" name="phone" value="{{ old('phone') }}" required
+                                               class="w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                               placeholder="09XX-XXX-XXXX">
+                                        @error('phone')
+                                            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">Work Email *</label>
+                                        <input type="email" name="work_email" value="{{ old('work_email') }}" required
+                                               class="w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                               placeholder="treasurer@pac.edu.ph">
+                                        @error('work_email')
+                                            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Address --}}
+                            <div class="border-t border-slate-700 pt-6">
+                                <h3 class="text-lg font-semibold mb-4 text-amber-400">
+                                    <i class="fas fa-map-marker-alt mr-2"></i>Address
+                                </h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">Street / Barangay *</label>
+                                        <input type="text" name="street" value="{{ old('street') }}" required
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                               placeholder="House No., Street, Barangay">
+                                        @error('street')
+                                            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Municipality / City *</label>
+                                            <input type="text" name="municipality" value="{{ old('municipality') }}" required
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                                   placeholder="Municipality or City">
+                                            @error('municipality')
+                                                <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Province *</label>
+                                            <input type="text" name="province" value="{{ old('province') }}" required
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                                   placeholder="Province">
+                                            @error('province')
+                                                <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">ZIP Code</label>
+                                            <input type="text" name="zip_code" value="{{ old('zip_code') }}"
+                                                   class="w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                                   placeholder="4-digit ZIP code" maxlength="4" pattern="\d{4}">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Country</label>
+                                            <input type="text" name="country" value="{{ old('country', 'Philippines') }}"
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 transition"
+                                                   placeholder="Philippines">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
 
                         {{-- ══════════════════════════════════════
