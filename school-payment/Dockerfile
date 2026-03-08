@@ -1,50 +1,66 @@
-# Use official PHP with Apache (recommended for Laravel on Render)
-# Pick the version matching your app (e.g., 8.2, 8.3 — check composer.json "php" requirement)
-FROM php:8.2-apache
+# Use official PHP 8.3 with Apache – matches your composer.json ^8.2 requirement
+FROM php:8.3-apache
 
-# Install system dependencies + common PHP extensions for Laravel
+# Set working directory
+WORKDIR /var/www/html
+
+# Install system dependencies + libraries needed for PHP extensions
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libzip-dev \
+    libonig-dev      # for mbstring \
+    libxml2-dev      # for xml/dom \
+    libicu-dev       # for intl \
     unzip \
     git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
         pdo_mysql \
+        mysqli \
         zip \
         gd \
+        mbstring \
         exif \
         pcntl \
         bcmath \
-    && a2enmod rewrite
+        intl \
+        xml \
+        dom \
+    && a2enmod rewrite \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /var/www/html
-
-# Copy application code
+# Copy application code (do this early so we can cache composer install)
 COPY . .
 
-# Set proper permissions (Laravel needs storage & bootstrap/cache writable)
+# Set Laravel/Filament production environment variables
+ENV APP_ENV=production \
+    APP_DEBUG=false \
+    LOG_CHANNEL=stderr \
+    PHP_OPCACHE_ENABLE=1 \
+    COMPOSER_ALLOW_SUPERUSER=1
+
+# Install Composer from official image (multi-stage for smaller final image)
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Install dependencies (production mode – no dev packages)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+# Set proper ownership & permissions for Laravel storage & cache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# Install Composer dependencies (production mode)
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader --no-interaction
-
-# Configure Apache to point to Laravel's public/ folder
-# (most important change — Apache serves from /public by default now)
+# Configure Apache to serve from Laravel's /public folder
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Optional: copy custom php.ini if you have one
+# Optional: If you have a custom php.ini, uncomment and adjust path
 # COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 
 # Expose port 80 (Render expects this)
 EXPOSE 80
 
-# Start Apache in foreground (Render runs this)
+# Start Apache in foreground (default for php:*-apache images)
 CMD ["apache2-foreground"]
