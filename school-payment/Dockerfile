@@ -1,22 +1,43 @@
-# Use official PHP 8.3 with Apache – matches your composer.json ^8.2 requirement
+# =============================================================================
+# Stage 1: Composer dependencies (isolated, lightweight)
+# =============================================================================
+FROM composer:2 AS composer
+
+WORKDIR /app
+
+# Copy only dependency files first → excellent layer caching
+COPY composer.json composer.lock* ./
+
+# Install production dependencies only
+# --ignore-platform-reqs is almost always needed in Docker builds
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --ignore-platform-reqs
+
+# =============================================================================
+# Stage 2: Final production image
+# =============================================================================
 FROM php:8.3-apache
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies + libraries needed for PHP extensions
-RUN apt-get update && apt-get install -y \
+# Install system dependencies + PHP extensions (only what's truly needed)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libzip-dev \
-    libonig-dev      # for mbstring \
-    libxml2-dev      # for xml/dom \
-    libicu-dev       # for intl \
+    libonig-dev \
+    libxml2-dev \
+    libicu-dev \
     unzip \
     git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install \
+    && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
         mysqli \
         zip \
@@ -31,36 +52,37 @@ RUN apt-get update && apt-get install -y \
     && a2enmod rewrite \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy application code (do this early so we can cache composer install)
+# Copy Composer dependencies from previous stage
+COPY --from=composer /app/vendor /var/www/html/vendor
+COPY --from=composer /app/composer.* /var/www/html/
+
+# Copy the rest of the application code
 COPY . .
 
-# Set Laravel/Filament production environment variables
+# Set Laravel/Filament production environment
 ENV APP_ENV=production \
     APP_DEBUG=false \
-    LOG_CHANNEL=stderr \
-    PHP_OPCACHE_ENABLE=1 \
-    COMPOSER_ALLOW_SUPERUSER=1
+    LOG_CHANNEL=stderr
 
-# Install Composer from official image (multi-stage for smaller final image)
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Generate optimized classmap + Filament caches (very important for Filament perf)
+RUN php artisan filament:optimize --ansi \
+    && php artisan optimize:clear --ansi \
+    && php artisan optimize --ansi
 
-# Install dependencies (production mode – no dev packages)
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
-# Set proper ownership & permissions for Laravel storage & cache
+# Fix permissions (Laravel needs these writable by www-data)
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# Configure Apache to serve from Laravel's /public folder
+# Set Apache to serve from Laravel's /public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Optional: If you have a custom php.ini, uncomment and adjust path
-# COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
+# Optional: If you use Laravel scheduler or queues, consider a separate multi-container setup later
+# (e.g. one for web, one for queue worker, one for scheduler cron)
 
-# Expose port 80 (Render expects this)
+# Expose port (most platforms like Render/Fly.io expect 80)
 EXPOSE 80
 
-# Start Apache in foreground (default for php:*-apache images)
+# Start Apache in foreground
 CMD ["apache2-foreground"]
