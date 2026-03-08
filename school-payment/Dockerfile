@@ -67,7 +67,7 @@ RUN cp -n .env.example .env || true \
     && echo "LOG_CHANNEL=stderr" >> .env \
     # Dummy DB values to avoid "could not find driver" or connection attempts
     && echo "DB_CONNECTION=mysql" >> .env \
-    && echo "DB_HOST=127.0.0.1" >> .env \
+    && echo "DB_HOST=mysql" >> .env \
     && echo "DB_PORT=3306" >> .env \
     && echo "DB_DATABASE=laravel" >> .env \
     && echo "DB_USERNAME=root" >> .env \
@@ -93,7 +93,9 @@ EXPOSE 80
 
 # Override the default CMD to run discovery + optimization on first start
 # (in production you usually run these once via entrypoint or migration job)
-CMD php artisan optimize:clear --ansi \
+CMD php artisan config:clear --ansi \
+    && php artisan view:clear --ansi \
+    && php artisan route:clear --ansi \
     && php artisan package:discover --ansi \
     && php artisan filament:upgrade --ansi \
     && php artisan filament:optimize --ansi \
