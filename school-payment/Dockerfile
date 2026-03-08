@@ -15,7 +15,7 @@ RUN composer install \
     --prefer-dist \
     --optimize-autoloader \
     --ignore-platform-reqs \
-    --no-scripts     # ← IMPORTANT: prevents post-autoload-dump from running artisan commands
+    --no-scripts
 
 # =============================================================================
 # Stage 2: Final production image
@@ -59,13 +59,12 @@ COPY --from=composer /app/composer.* /var/www/html/
 # Copy the rest of the application code
 COPY . .
 
-# Create minimal .env if missing (prevents env parsing crashes during artisan commands)
-# APP_KEY is intentionally omitted here — it must be set as an environment variable in Render
+# Create minimal .env and strip any APP_KEY placeholder so Render's env var takes effect at runtime
 RUN cp -n .env.example .env || true \
+    && sed -i '/^APP_KEY=/d' .env \
     && echo "APP_ENV=production" >> .env \
     && echo "APP_DEBUG=false" >> .env \
     && echo "LOG_CHANNEL=stderr" >> .env \
-    # Dummy DB values to avoid "could not find driver" or connection attempts
     && echo "DB_CONNECTION=mysql" >> .env \
     && echo "DB_HOST=mysql" >> .env \
     && echo "DB_PORT=3306" >> .env \
@@ -73,7 +72,7 @@ RUN cp -n .env.example .env || true \
     && echo "DB_USERNAME=root" >> .env \
     && echo "DB_PASSWORD=" >> .env
 
-# Set Laravel/Filament production environment (override .env if needed)
+# Set Laravel/Filament production environment
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr
@@ -91,9 +90,10 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 # Expose port (most platforms like Render expect 80)
 EXPOSE 80
 
-# Override the default CMD to run discovery + optimization on first start
-# (in production you usually run these once via entrypoint or migration job)
-CMD php artisan config:clear --ansi \
+# At startup: inject APP_KEY from Render env var into .env, then boot
+CMD sed -i '/^APP_KEY=/d' .env \
+    && echo "APP_KEY=${APP_KEY}" >> .env \
+    && php artisan config:clear --ansi \
     && php artisan view:clear --ansi \
     && php artisan route:clear --ansi \
     && php artisan package:discover --ansi \
