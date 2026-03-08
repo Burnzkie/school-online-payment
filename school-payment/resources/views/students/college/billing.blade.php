@@ -184,18 +184,20 @@
                         <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">School Year</label>
                         <select name="school_year" class="bl-select w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-semibold"
                                 onchange="this.form.submit()">
-                            @foreach($availableYears ?? ['2025-2026', '2024-2025', '2023-2024'] as $year)
-                                <option value="{{ $year }}" {{ ($selectedYear ?? '2025-2026') === $year ? 'selected' : '' }}>{{ $year }}</option>
-                            @endforeach
+                            @forelse($availableYears ?? [] as $year)
+                                <option value="{{ $year }}" {{ ($selectedYear ?? '') === $year ? 'selected' : '' }}>{{ $year }}</option>
+                            @empty
+                                <option value="" disabled>No data available</option>
+                            @endforelse
                         </select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Semester</label>
                         <select name="semester" class="bl-select w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-semibold"
                                 onchange="this.form.submit()">
-                            <option value="1"      {{ ($selectedSemester ?? '2') === '1'      ? 'selected' : '' }}>1st Semester</option>
-                            <option value="2"      {{ ($selectedSemester ?? '2') === '2'      ? 'selected' : '' }}>2nd Semester</option>
-                            <option value="summer" {{ ($selectedSemester ?? '2') === 'summer' ? 'selected' : '' }}>Summer</option>
+                            <option value="1"      {{ ($selectedSemester ?? '') === '1'      ? 'selected' : '' }}>1st Semester</option>
+                            <option value="2"      {{ ($selectedSemester ?? '') === '2'      ? 'selected' : '' }}>2nd Semester</option>
+                            <option value="summer" {{ ($selectedSemester ?? '') === 'summer' ? 'selected' : '' }}>Summer</option>
                         </select>
                     </div>
                 </form>
@@ -210,11 +212,12 @@
                     <div>
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Currently Viewing</p>
                         <p class="font-bold text-slate-700 text-sm mt-0.5">
-                            {{ $selectedYear ?? '2025-2026' }} —
-                            @switch($selectedSemester ?? '2')
+                            {{ $selectedYear ?? '—' }} —
+                            @switch($selectedSemester ?? '')
                                 @case('1') 1st Semester @break
+                                @case('2') 2nd Semester @break
                                 @case('summer') Summer @break
-                                @default 2nd Semester
+                                @default —
                             @endswitch
                         </p>
                     </div>
@@ -295,7 +298,7 @@
                 </div>
                 <div>
                     <h2 class="font-bold text-gray-800 text-base leading-tight">Student Ledger</h2>
-                    <p class="text-gray-400 text-xs">{{ $selectedYear ?? '2025-2026' }} — full record</p>
+                    <p class="text-gray-400 text-xs">{{ $selectedYear ?? '—' }} — full record</p>
                 </div>
             </div>
             <button onclick="window.print()"
@@ -363,7 +366,7 @@
                     <tr class="bg-slate-100 border-t-2 border-slate-200">
                         <td class="px-6 py-4 font-bold text-slate-800 text-sm uppercase tracking-wide">Total</td>
                         <td class="px-6 py-4 text-right font-mono-num font-bold text-rose-600 text-sm">₱{{ number_format($totalCharges ?? 0, 2) }}</td>
-                        <td class="px-6 py-4 text-right font-mono-num font-bold text-emerald-600 text-sm">₱{{ number_format($totalPayments ?? $paid ?? 0, 2) }}</td>
+                        <td class="px-6 py-4 text-right font-mono-num font-bold text-emerald-600 text-sm">₱{{ number_format($totalPayments ?? 0, 2) }}</td>
                     </tr>
 
                     {{-- Remaining Balance Row --}}
