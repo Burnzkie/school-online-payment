@@ -51,20 +51,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=composer /app/vendor /var/www/html/vendor
 COPY --from=composer /app/composer.* /var/www/html/
 
+# Copy everything EXCEPT .env (add .env to your .dockerignore too)
 COPY . .
 
-# Build a clean .env — strip APP_KEY entirely so no placeholder survives into the image
-RUN cp -n .env.example .env || true \
-    && sed -i '/^APP_KEY=/d' .env \
+# Delete any .env that was copied in, then build a clean one from scratch
+# APP_KEY is intentionally left out — it will be injected at runtime from Render's env var
+RUN rm -f .env \
+    && echo "APP_NAME=Laravel" > .env \
     && echo "APP_ENV=production" >> .env \
     && echo "APP_DEBUG=false" >> .env \
+    && echo "APP_URL=http://localhost" >> .env \
+    && echo "APP_KEY=" >> .env \
     && echo "LOG_CHANNEL=stderr" >> .env \
+    && echo "LOG_LEVEL=debug" >> .env \
     && echo "DB_CONNECTION=mysql" >> .env \
     && echo "DB_HOST=mysql" >> .env \
     && echo "DB_PORT=3306" >> .env \
     && echo "DB_DATABASE=laravel" >> .env \
     && echo "DB_USERNAME=root" >> .env \
-    && echo "DB_PASSWORD=" >> .env
+    && echo "DB_PASSWORD=" >> .env \
+    && echo "SESSION_DRIVER=database" >> .env \
+    && echo "SESSION_LIFETIME=120" >> .env \
+    && echo "QUEUE_CONNECTION=database" >> .env \
+    && echo "CACHE_STORE=database" >> .env \
+    && echo "FILESYSTEM_DISK=local" >> .env \
+    && echo "BROADCAST_CONNECTION=log" >> .env
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
@@ -80,15 +91,15 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 
 EXPOSE 80
 
-# At startup:
-# 1. Remove any leftover APP_KEY line (including placeholders like "php artisan key:generate --show")
-# 2. Write the real APP_KEY from Render's environment variable
-# 3. Fail loudly if APP_KEY is empty so the problem is obvious
+# At startup: inject real APP_KEY and DB config from Render env vars, then boot
 CMD if [ -z "${APP_KEY}" ]; then \
-        echo "ERROR: APP_KEY environment variable is not set!" && exit 1; \
+        echo "ERROR: APP_KEY environment variable is not set on Render!" && exit 1; \
     fi \
     && sed -i '/^APP_KEY=/d' .env \
     && echo "APP_KEY=${APP_KEY}" >> .env \
+    && sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${DB_DATABASE}|" .env \
+    && sed -i "s|^DB_USERNAME=.*|DB_USERNAME=${DB_USERNAME}|" .env \
+    && sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${DB_PASSWORD}|" .env \
     && php artisan config:clear --ansi \
     && php artisan view:clear --ansi \
     && php artisan route:clear --ansi \
