@@ -60,8 +60,8 @@ COPY --from=composer /app/composer.* /var/www/html/
 COPY . .
 
 # Create minimal .env if missing (prevents env parsing crashes during artisan commands)
+# APP_KEY is intentionally omitted here — it must be set as an environment variable in Render
 RUN cp -n .env.example .env || true \
-    && echo "APP_KEY=base64:abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz12" >> .env \
     && echo "APP_ENV=production" >> .env \
     && echo "APP_DEBUG=false" >> .env \
     && echo "LOG_CHANNEL=stderr" >> .env \
