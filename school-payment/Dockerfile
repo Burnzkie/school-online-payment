@@ -91,5 +91,10 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 # Expose port (most platforms like Render expect 80)
 EXPOSE 80
 
-# Start Apache in foreground
-CMD ["apache2-foreground"]
+# Override the default CMD to run discovery + optimization on first start
+# (in production you usually run these once via entrypoint or migration job)
+CMD php artisan optimize:clear --ansi \
+    && php artisan package:discover --ansi \
+    && php artisan filament:upgrade --ansi \
+    && php artisan filament:optimize --ansi \
+    && apache2-foreground
