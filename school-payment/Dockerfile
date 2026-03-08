@@ -8,14 +8,14 @@ WORKDIR /app
 # Copy only dependency files first → excellent layer caching
 COPY composer.json composer.lock* ./
 
-# Install production dependencies only
-# --ignore-platform-reqs is almost always needed in Docker builds
+# Install production dependencies only – skip discovery/upgrade here
 RUN composer install \
     --no-dev \
     --no-interaction \
     --prefer-dist \
     --optimize-autoloader \
-    --ignore-platform-reqs
+    --ignore-platform-reqs \
+    --no-scripts     # ← IMPORTANT: prevents post-autoload-dump from running artisan commands
 
 # =============================================================================
 # Stage 2: Final production image
@@ -59,18 +59,28 @@ COPY --from=composer /app/composer.* /var/www/html/
 # Copy the rest of the application code
 COPY . .
 
-# Set Laravel/Filament production environment
+# Create minimal .env if missing (prevents env parsing crashes during artisan commands)
+RUN cp -n .env.example .env || true \
+    && echo "APP_KEY=base64:abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz12" >> .env \
+    && echo "APP_ENV=production" >> .env \
+    && echo "APP_DEBUG=false" >> .env \
+    && echo "LOG_CHANNEL=stderr" >> .env \
+    # Dummy DB values to avoid "could not find driver" or connection attempts
+    && echo "DB_CONNECTION=mysql" >> .env \
+    && echo "DB_HOST=127.0.0.1" >> .env \
+    && echo "DB_PORT=3306" >> .env \
+    && echo "DB_DATABASE=laravel" >> .env \
+    && echo "DB_USERNAME=root" >> .env \
+    && echo "DB_PASSWORD=" >> .env
+
+# Set Laravel/Filament production environment (override .env if needed)
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr
 
-# Generate optimized classmap + Filament caches (very important for Filament perf)
-RUN php artisan filament:optimize --ansi \
-    && php artisan optimize:clear --ansi \
-    && php artisan optimize --ansi
-
-# Fix permissions (Laravel needs these writable by www-data)
-RUN chown -R www-data:www-data /var/www/html \
+# Prepare Laravel directories early (prevents permission/cache issues later)
+RUN mkdir -p storage/framework/{cache,sessions,views} \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
 # Set Apache to serve from Laravel's /public
@@ -78,11 +88,13 @@ ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Optional: If you use Laravel scheduler or queues, consider a separate multi-container setup later
-# (e.g. one for web, one for queue worker, one for scheduler cron)
-
-# Expose port (most platforms like Render/Fly.io expect 80)
+# Expose port (most platforms like Render expect 80)
 EXPOSE 80
 
-# Start Apache in foreground
-CMD ["apache2-foreground"]
+# Override the default CMD to run discovery + optimization on first start
+# (in production you usually run these once via entrypoint or migration job)
+CMD php artisan optimize:clear --ansi \
+    && php artisan package:discover --ansi \
+    && php artisan filament:upgrade --ansi \
+    && php artisan filament:optimize --ansi \
+    && apache2-foreground
