@@ -107,6 +107,16 @@
             <p class="text-slate-500 text-sm mt-1.5">Manage your tuition charges and payment records.</p>
         </div>
         <div class="flex items-center gap-3 bl-no-print">
+            @if(($balance ?? 0) > 0)
+            <button onclick="document.getElementById('bl-pay-modal').classList.remove('hidden')"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all"
+                    style="background: linear-gradient(135deg,#059669,#10b981);">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                </svg>
+                Pay Online
+            </button>
+            @endif
             @if(!isset($activePlan) && ($balance ?? 0) > 0)
             <a href="{{ route('student.installments') }}"
                class="bl-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg">
@@ -253,6 +263,18 @@
                         </div>
                         <span class="text-xs font-bold opacity-60">{{ $paidPct }}% paid</span>
                     </div>
+                    @if(($balance ?? 0) > 0)
+                    <button onclick="document.getElementById('bl-pay-modal').classList.remove('hidden')"
+                            class="bl-no-print mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+                            style="background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);color:white;backdrop-filter:blur(8px);"
+                            onmouseover="this.style.background='rgba(255,255,255,.28)'"
+                            onmouseout="this.style.background='rgba(255,255,255,.18)'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        </svg>
+                        Pay Online Now
+                    </button>
+                    @endif
                 </div>
             </div>
 
@@ -388,5 +410,339 @@
         </div>
     </div>
 
+    {{-- ── Online Payment Pending Notice ── --}}
+    @if(session('payment_submitted'))
+    <div class="bl-fade bl-no-print flex items-start gap-4 p-5 rounded-2xl border"
+         style="background:#f0fdf4; border-color:#bbf7d0;">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+             style="background:#dcfce7;">
+            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <div>
+            <p class="font-bold text-emerald-800 text-sm">Payment Submitted for Verification</p>
+            <p class="text-emerald-700 text-xs mt-1">Your proof of payment has been received. The cashier will verify and confirm your payment within 1–2 business days. You will see the update reflected in your ledger once confirmed.</p>
+        </div>
+    </div>
+    @endif
+
 </div>
+
+{{-- ══════════════════════════════════════════════════════
+     PAY ONLINE MODAL
+══════════════════════════════════════════════════════ --}}
+<div id="bl-pay-modal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background:rgba(15,23,42,.55); backdrop-filter:blur(6px);"
+     onclick="if(event.target===this) this.classList.add('hidden')">
+
+    <div class="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+         style="max-height:90vh; overflow-y:auto;">
+
+        {{-- Modal Header --}}
+        <div class="px-7 py-5 flex items-center justify-between"
+             style="background:linear-gradient(135deg,#4f46e5,#7c3aed);">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="font-bold text-white text-base">Pay Online</p>
+                    <p class="text-white/70 text-xs">Submit proof of payment for verification</p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('bl-pay-modal').classList.add('hidden')"
+                    class="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        {{-- Balance Due Summary --}}
+        <div class="mx-6 mt-5 p-4 rounded-2xl flex items-center justify-between"
+             style="background:#fef3c7; border:1.5px solid #fde68a;">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Outstanding Balance</p>
+                <p class="font-mono-num text-2xl font-extrabold text-amber-800 mt-0.5">₱{{ number_format($balance ?? 0, 2) }}</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center"
+                 style="background:#fef9c3;">
+                <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+        </div>
+
+        {{-- ── STEP 1: Choose Payment Method ── --}}
+        <div id="bl-step1" class="px-6 py-5 space-y-3">
+            <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Choose how you want to pay</p>
+
+            {{-- GCash --}}
+            <button type="button" onclick="blGoToMethod('GCash')"
+                    class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
+                    </svg>
+                </div>
+                <div class="flex-1 text-left">
+                    <p class="font-bold text-gray-800 text-sm">GCash</p>
+                    <p class="text-xs text-gray-400">Opens GCash — send to PAC Finance</p>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+
+            {{-- Maya --}}
+            <button type="button" onclick="blGoToMethod('PayMaya')"
+                    class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 hover:border-purple-300 hover:bg-purple-50 transition-all group">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                    <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
+                    </svg>
+                </div>
+                <div class="flex-1 text-left">
+                    <p class="font-bold text-gray-800 text-sm">Maya</p>
+                    <p class="text-xs text-gray-400">Opens Maya — send to PAC Finance</p>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 group-hover:text-purple-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+
+            {{-- Bank Transfer --}}
+            <button type="button" onclick="blGoToMethod('Bank Transfer')"
+                    class="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl border-2 border-gray-100 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50 transition-all group">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-100 group-hover:bg-emerald-200 transition-colors">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                </div>
+                <div class="flex-1 text-left">
+                    <p class="font-bold text-gray-800 text-sm">Bank Transfer</p>
+                    <p class="text-xs text-gray-400">BDO / BPI / Landbank — see account details</p>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 group-hover:text-emerald-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+
+            <p class="text-center text-xs text-gray-300 pt-1">You will be redirected to complete your payment, then come back to upload your receipt.</p>
+        </div>
+
+        {{-- ── STEP 2: Account Details + Upload Form ── --}}
+        <div id="bl-step2" class="hidden">
+
+            {{-- Back button --}}
+            <div class="px-6 pt-4">
+                <button type="button" onclick="blBackToStep1()"
+                        class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-indigo-500 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back
+                </button>
+            </div>
+
+            {{-- Account details per method --}}
+            <div id="bl-details-gcash" class="hidden px-6 pt-3">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">GCash Account</p>
+                <div class="rounded-2xl overflow-hidden border border-blue-100">
+                    <div class="px-4 py-3 flex items-center justify-between" style="background:#eff6ff;">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-400">Number</p>
+                            <p class="font-mono font-extrabold text-blue-800 text-lg tracking-widest mt-0.5">0917 123 4567</p>
+                        </div>
+                        <button type="button" onclick="blCopy('09171234567', this)"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-600 bg-white border border-blue-200 hover:bg-blue-50 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            Copy
+                        </button>
+                    </div>
+                    <div class="px-4 py-2 bg-white border-t border-blue-50">
+                        <p class="text-xs text-gray-500">Account Name: <strong class="text-gray-800">Philippine Advent College</strong></p>
+                    </div>
+                </div>
+                <a href="https://gcash.com" target="_blank"
+                   class="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+                   style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);">
+                    Open GCash App
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+            </div>
+
+            <div id="bl-details-paymaya" class="hidden px-6 pt-3">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Maya Account</p>
+                <div class="rounded-2xl overflow-hidden border border-purple-100">
+                    <div class="px-4 py-3 flex items-center justify-between" style="background:#f5f3ff;">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-purple-400">Number</p>
+                            <p class="font-mono font-extrabold text-purple-800 text-lg tracking-widest mt-0.5">0917 123 4567</p>
+                        </div>
+                        <button type="button" onclick="blCopy('09171234567', this)"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-purple-600 bg-white border border-purple-200 hover:bg-purple-50 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            Copy
+                        </button>
+                    </div>
+                    <div class="px-4 py-2 bg-white border-t border-purple-50">
+                        <p class="text-xs text-gray-500">Account Name: <strong class="text-gray-800">Philippine Advent College</strong></p>
+                    </div>
+                </div>
+                <a href="https://maya.ph" target="_blank"
+                   class="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+                   style="background:linear-gradient(135deg,#7c3aed,#a855f7);">
+                    Open Maya App
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                </a>
+            </div>
+
+            <div id="bl-details-bank" class="hidden px-6 pt-3 space-y-2">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Bank Account Details</p>
+                @foreach([['BDO','1234-5678-90'],['BPI','9876-5432-10'],['Landbank','0001-1234-56']] as [$bank,$acct])
+                <div class="rounded-2xl overflow-hidden border border-emerald-100">
+                    <div class="px-4 py-3 flex items-center justify-between" style="background:#f0fdf4;">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-500">{{ $bank }}</p>
+                            <p class="font-mono font-extrabold text-emerald-800 text-sm tracking-widest mt-0.5">{{ $acct }}</p>
+                        </div>
+                        <button type="button" onclick="blCopy('{{ $acct }}', this)"
+                                class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-emerald-600 bg-white border border-emerald-200 hover:bg-emerald-50 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                            Copy
+                        </button>
+                    </div>
+                    <div class="px-4 py-2 bg-white border-t border-emerald-50">
+                        <p class="text-xs text-gray-500">Account Name: <strong class="text-gray-800">Philippine Advent College</strong></p>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+
+            {{-- Upload form --}}
+            <form method="POST"
+                  action="{{ route('student.billing.pay-online') }}"
+                  enctype="multipart/form-data"
+                  class="px-6 pb-6 mt-4 space-y-4">
+                @csrf
+                <input type="hidden" name="school_year"     value="{{ $selectedYear ?? '' }}">
+                <input type="hidden" name="semester"        value="{{ $selectedSemester ?? '' }}">
+                <input type="hidden" name="payment_method"  id="bl-method-input" value="">
+
+                <div class="border-t border-gray-100 pt-4">
+                    <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">After Paying — Upload Your Receipt</p>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Amount Paid (₱) *</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400 select-none">₱</span>
+                            <input type="number" name="amount" step="0.01" min="1"
+                                   max="{{ $balance ?? 999999 }}"
+                                   value="{{ $balance ?? '' }}"
+                                   placeholder="0.00" required
+                                   class="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 font-mono-num font-bold text-lg focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Screenshot / Receipt *</label>
+                        <label id="bl-upload-label"
+                               class="flex items-center gap-3 w-full px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 cursor-pointer transition-all hover:border-indigo-300 hover:bg-indigo-50/40"
+                               for="bl-proof-input">
+                            <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-400" id="bl-upload-text">Click to upload screenshot / receipt</p>
+                                <p class="text-xs text-gray-300">JPG, PNG, PDF — max 5MB</p>
+                            </div>
+                            <input id="bl-proof-input" type="file" name="proof_of_payment"
+                                   accept="image/*,.pdf" required class="hidden"
+                                   onchange="blPreviewProof(this)">
+                        </label>
+                        <img id="bl-proof-preview" src="" alt="Preview" class="hidden mt-2 w-full rounded-xl object-contain max-h-36 border border-indigo-100">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Notes <span class="font-normal normal-case text-gray-300">(optional)</span></label>
+                        <textarea name="notes" rows="2" placeholder="Any notes for the cashier…"
+                                  class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 text-sm resize-none focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="submit"
+                            class="flex-1 py-3.5 rounded-2xl font-bold text-white text-sm transition-all"
+                            style="background:linear-gradient(135deg,#4f46e5,#7c3aed);">
+                        Submit Receipt
+                    </button>
+                    <button type="button"
+                            onclick="document.getElementById('bl-pay-modal').classList.add('hidden')"
+                            class="px-5 py-3.5 rounded-2xl font-semibold text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all">
+                        Cancel
+                    </button>
+                </div>
+
+                <p class="text-center text-xs text-gray-300">
+                    ⏱ Cashier will verify your payment within 1–2 business days.
+                </p>
+            </form>
+        </div>
+
+@push('scripts')
+<script>
+function blGoToMethod(method) {
+    // Set hidden input
+    document.getElementById('bl-method-input').value = method;
+
+    // Hide step 1, show step 2
+    document.getElementById('bl-step1').classList.add('hidden');
+    document.getElementById('bl-step2').classList.remove('hidden');
+
+    // Show correct account details
+    ['gcash','paymaya','bank'].forEach(k => document.getElementById('bl-details-' + k).classList.add('hidden'));
+    const key = method === 'GCash' ? 'gcash' : (method === 'PayMaya' ? 'paymaya' : 'bank');
+    document.getElementById('bl-details-' + key).classList.remove('hidden');
+}
+
+function blBackToStep1() {
+    document.getElementById('bl-step2').classList.add('hidden');
+    document.getElementById('bl-step1').classList.remove('hidden');
+    document.getElementById('bl-method-input').value = '';
+}
+
+function blCopy(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.disabled = true;
+        setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2000);
+    });
+}
+
+function blPreviewProof(input) {
+    const file    = input.files[0];
+    const preview = document.getElementById('bl-proof-preview');
+    const label   = document.getElementById('bl-upload-text');
+    if (!file) return;
+    label.textContent = '✅ ' + file.name;
+    if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => { preview.src = e.target.result; preview.classList.remove('hidden'); };
+        reader.readAsDataURL(file);
+    } else {
+        preview.classList.add('hidden');
+    }
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('bl-pay-modal')?.classList.add('hidden');
+});
+</script>
+@endpush
 @endsection

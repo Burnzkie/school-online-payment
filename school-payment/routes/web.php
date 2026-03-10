@@ -22,6 +22,7 @@ use App\Http\Controllers\Treasurer\TreasurerController;
 
 // ── Admin Controllers ───────────────────────────────────────────────────────
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\InvitationCodeController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -186,6 +187,11 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
     Route::patch('/profile',                         [AdminController::class, 'profileUpdate'])->name('profile.update');
     Route::post('/profile/update-photo',             [AdminController::class, 'profileUpdatePhoto'])->name('profile.update-photo');
     Route::patch('/profile/change-password',         [AdminController::class, 'profileChangePassword'])->name('profile.change-password');
+
+    // ── Invitation Codes ───────────────────────────────────────────────────
+    Route::get('/invitation-codes',                        [InvitationCodeController::class, 'index'])->name('invitation-codes');
+    Route::post('/invitation-codes',                       [InvitationCodeController::class, 'store'])->name('invitation-codes.store');
+    Route::delete('/invitation-codes/{invitationCode}',    [InvitationCodeController::class, 'destroy'])->name('invitation-codes.destroy');
 });
 
 /*
@@ -194,34 +200,19 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth'])->prefix('student')->name('student.')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('student')->name('student.')->group(function () {
 
-    Route::get('/dashboard', function () {
-        $user = auth()->user();
-
-        $levelGroup = strtolower($user->level_group ?? '');
-        if (str_contains($levelGroup, 'junior') || str_contains($levelGroup, 'senior')) {
-            return redirect()->route('hs.dashboard');
-        }
-
-        return view('students.college.dashboard', [
-            'balance'        => 12450.00,
-            'nextDueDate'    => 'March 15, 2026',
-            'progress'       => 68,
-            'paid'           => 28500,
-            'total'          => 42000,
-            'recentPayments' => [
-                ['date' => now()->subDays(12), 'amount' => 5000, 'method' => 'GCash'],
-                ['date' => now()->subDays(45), 'amount' => 8000, 'method' => 'Bank'],
-            ],
-        ]);
-    })->name('dashboard');
+    Route::get('/dashboard', [StudentDashboardController::class, 'index'])
+         ->name('dashboard');
 
     Route::get('/payment/create', [StudentDashboardController::class, 'paymentCreate'])
          ->name('payment.create');
 
     Route::get('/billing', [BillingController::class, 'index'])
          ->name('billing');
+
+    Route::post('/billing/pay-online', [BillingController::class, 'payOnline'])
+         ->name('billing.pay-online');
 
     Route::get('/installments', [InstallmentPlanController::class, 'index'])
          ->name('installments');
@@ -261,6 +252,9 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureHighSchoolStudent::class])
 
     Route::get('/billing', [HSBillingController::class, 'index'])
          ->name('billing');
+
+    Route::post('/billing/pay-online', [HSBillingController::class, 'payOnline'])
+         ->name('billing.pay-online');
 
     Route::get('/installments', [HSInstallmentPlanController::class, 'index'])
          ->name('installments');
@@ -315,6 +309,19 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureCashier::class])
 
     Route::post('/receive-payment', [CashierController::class, 'storePayment'])
          ->name('receive-payment.store');
+
+    // Online payment submissions (from student portal)
+    Route::get('/online-payments',                                    [CashierController::class, 'onlinePayments'])
+         ->name('online-payments');
+
+    Route::get('/online-payments/{submission}',                       [CashierController::class, 'onlinePaymentShow'])
+         ->name('online-payments.show');
+
+    Route::patch('/online-payments/{submission}/verify',              [CashierController::class, 'onlinePaymentVerify'])
+         ->name('online-payments.verify');
+
+    Route::patch('/online-payments/{submission}/reject',              [CashierController::class, 'onlinePaymentReject'])
+         ->name('online-payments.reject');
 
     // Transactions & receipts
     Route::get('/transactions', [CashierController::class, 'transactions'])

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\InvitationCode;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,12 @@ use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
+    /**
+     * Roles that require an invitation code from the admin.
+     * Students use email verification instead.
+     */
+    const INVITE_ROLES = ['cashier', 'treasurer', 'parent'];
+
     public function create(): View
     {
         return view('auth.register');
@@ -69,13 +76,38 @@ class RegisteredUserController extends Controller
 
             // Non-student roles
             'extra_info'            => ['nullable', 'string', 'max:255'],
+
+            // Invitation code (required for cashier, treasurer, parent)
+            'invitation_code'       => ['nullable', 'string', 'max:32'],
         ]);
+
+        $role = $validated['role'];
+
+        // ── Invitation code check for staff & parent ──────────────────────────
+        $inviteCode = null;
+        if (in_array($role, self::INVITE_ROLES)) {
+            if (empty($validated['invitation_code'])) {
+                return back()->withInput()->withErrors([
+                    'invitation_code' => 'An invitation code is required for this role. Please contact the admin.',
+                ]);
+            }
+
+            $inviteCode = InvitationCode::where('code', strtoupper(trim($validated['invitation_code'])))
+                ->where('role', $role)
+                ->first();
+
+            if (!$inviteCode || !$inviteCode->isValid()) {
+                return back()->withInput()->withErrors([
+                    'invitation_code' => 'Invalid or expired invitation code. Please contact the admin.',
+                ]);
+            }
+        }
 
         // ── Create the user ───────────────────────────────────────────────────
         $user = User::create([
             'email'                 => $validated['email'],
             'password'              => Hash::make($validated['password']),
-            'role'                  => $validated['role'],
+            'role'                  => $role,
             'name'                  => $validated['name'],
             'middle_name'           => $validated['middle_name']           ?? null,
             'last_name'             => $validated['last_name']             ?? null,
@@ -105,7 +137,17 @@ class RegisteredUserController extends Controller
             'guardian_relationship' => $validated['guardian_relationship'] ?? null,
             'guardian_contact'      => $validated['guardian_contact']      ?? null,
             'extra_info'            => $validated['extra_info']            ?? null,
+            // Staff/parent verified immediately via code; students must verify email
+            'email_verified_at'     => in_array($role, self::INVITE_ROLES) ? now() : null,
         ]);
+
+        // ── Mark invitation code as used ──────────────────────────────────────
+        if ($inviteCode) {
+            $inviteCode->update([
+                'used_by' => $user->id,
+                'used_at' => now(),
+            ]);
+        }
 
         event(new Registered($user));
 
@@ -117,13 +159,19 @@ class RegisteredUserController extends Controller
         if ($user->role === 'student') {
             $this->autoLinkStudentToParents($user);
         }
-        // ─────────────────────────────────────────────────────────────────────
 
-        Auth::logout();
+        // ── Students: send verification email, redirect to login with message ─
+        if ($role === 'student') {
+            $user->sendEmailVerificationNotification();
+            Auth::logout();
+            return redirect()->route('register')
+                ->with('registration_success', true)
+                ->with('status', '✅ Account created! Please check your email and click the verification link to activate your account.');
+        }
 
-        return redirect()->route('register')
-            ->with('registration_success', true)
-            ->with('status', '✅ Registration successful! Please login below.');
+        // ── Staff / Parent: code already verified → log in immediately ────────
+        Auth::login($user);
+        return redirect()->route('dashboard');
     }
 
     // =========================================================================

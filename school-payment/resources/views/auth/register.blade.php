@@ -141,6 +141,18 @@
                         </div>
                     @endif
 
+                    @if(session('status'))
+                    <div class="flex items-start gap-4 bg-emerald-900/30 border border-emerald-500/50 text-emerald-200 px-6 py-5 rounded-2xl mb-8">
+                        <svg class="w-6 h-6 flex-shrink-0 mt-0.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        <div>
+                            <p class="font-bold text-emerald-300 text-sm">Check Your Email</p>
+                            <p class="text-sm mt-1 text-emerald-200/80">{{ session('status') }}</p>
+                        </div>
+                    </div>
+                    @endif
+
                     <form method="POST" action="{{ route('register') }}" id="register-form">
                         @csrf
 
@@ -704,6 +716,31 @@
 
                         </div>{{-- end #cashier-form --}}
 
+                        {{-- ══════════════════════════════════════
+                             INVITATION CODE (staff & parent only)
+                        ══════════════════════════════════════ --}}
+                        <div id="invitation-code-wrap" class="hidden mt-6">
+                            <div class="border-t border-slate-700 pt-6">
+                                <label class="block text-sm font-medium mb-2">
+                                    Invitation Code *
+                                    <span class="text-slate-400 font-normal text-xs ml-1">— provided by the admin</span>
+                                </label>
+                                <input type="text" name="invitation_code"
+                                       id="invitation_code"
+                                       value="{{ old('invitation_code') }}"
+                                       placeholder="e.g. ABCD-EFGH-IJKL"
+                                       autocomplete="off"
+                                       class="w-full bg-slate-800 border border-slate-600 rounded-2xl px-6 py-4 font-mono tracking-widest uppercase focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition text-sky-300"
+                                       oninput="this.value = this.value.toUpperCase()">
+                                @error('invitation_code')
+                                    <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                @enderror
+                                <p class="text-xs text-slate-500 mt-2">
+                                    Don't have a code? Contact the PAC administrator.
+                                </p>
+                            </div>
+                        </div>
+
                         <button type="submit"
                                 class="w-full mt-8 py-5 rounded-3xl font-semibold text-lg transition-all active:scale-[0.98] hover:opacity-90" style="background: linear-gradient(135deg, #0ea5e9, #06b6d4); box-shadow: 0 8px 25px rgba(14,165,233,0.28);">
                             Create Account
@@ -769,10 +806,17 @@
             const parentForm    = document.getElementById('parent-form');
             const treasurerForm = document.getElementById('treasurer-form');
             const cashierForm   = document.getElementById('cashier-form');
+            const inviteWrap    = document.getElementById('invitation-code-wrap');
+            const inviteInput   = document.getElementById('invitation_code');
 
             [studentForm, parentForm, treasurerForm, cashierForm].forEach(f => {
                 if (f) { f.classList.add('hidden'); setRequiredFields(f, false); }
             });
+
+            // Show/hide invitation code field
+            const needsCode = ['parent', 'cashier', 'treasurer'].includes(currentRole);
+            inviteWrap.classList.toggle('hidden', !needsCode);
+            if (inviteInput) inviteInput.required = needsCode;
 
             if (currentRole === 'student') {
                 studentForm.classList.remove('hidden');

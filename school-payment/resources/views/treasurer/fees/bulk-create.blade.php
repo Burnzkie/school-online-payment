@@ -67,9 +67,11 @@
                     <label class="block text-xs font-bold uppercase tracking-wider mb-2 text-gray-500">Strand <span class="text-xs normal-case font-normal text-gray-400">(leave blank = all strands)</span></label>
                     <select name="strand" id="strand" class="form-input">
                         <option value="">— All Strands —</option>
-                        @foreach($strands as $strand)
-                            <option value="{{ $strand }}" {{ old('strand')==$strand ? 'selected':'' }}>{{ $strand }}</option>
-                        @endforeach
+                        <option value="STEM"  {{ old('strand')=='STEM'  ? 'selected':'' }}>STEM</option>
+                        <option value="ABM"   {{ old('strand')=='ABM'   ? 'selected':'' }}>ABM</option>
+                        <option value="HUMSS" {{ old('strand')=='HUMSS' ? 'selected':'' }}>HUMSS</option>
+                        <option value="GAS"   {{ old('strand')=='GAS'   ? 'selected':'' }}>GAS</option>
+                        <option value="TVL"   {{ old('strand')=='TVL'   ? 'selected':'' }}>TVL</option>
                     </select>
                 </div>
                 <div id="collegeWrap" style="display:none;" class="grid grid-cols-2 gap-4 mb-4">
@@ -77,9 +79,12 @@
                         <label class="block text-xs font-bold uppercase tracking-wider mb-2 text-gray-500">Department <span class="text-xs normal-case font-normal text-gray-400">(optional)</span></label>
                         <select name="department" id="department" class="form-input" onchange="handleDepartmentChange(this.value)">
                             <option value="">— All Departments —</option>
-                            @foreach($departments as $dept)
-                                <option value="{{ $dept }}" {{ old('department')==$dept ? 'selected':'' }}>{{ $dept }}</option>
-                            @endforeach
+                            <option value="Education"              {{ old('department')=='Education'              ? 'selected':'' }}>Education</option>
+                            <option value="Business Administration" {{ old('department')=='Business Administration' ? 'selected':'' }}>Business Administration</option>
+                            <option value="Computer Studies"       {{ old('department')=='Computer Studies'       ? 'selected':'' }}>Computer Studies</option>
+                            <option value="Engineering"            {{ old('department')=='Engineering'            ? 'selected':'' }}>Engineering</option>
+                            <option value="Nursing"                {{ old('department')=='Nursing'                ? 'selected':'' }}>Nursing</option>
+                            <option value="Theology"               {{ old('department')=='Theology'               ? 'selected':'' }}>Theology</option>
                         </select>
                     </div>
                     <div>
@@ -153,7 +158,14 @@ const yearLevelMap = {
     'Senior High': ['Grade 11','Grade 12'],
     'College':     ['1st Year','2nd Year','3rd Year','4th Year','5th Year'],
 };
-const programsByDept = @json($programsByDepartment ?? []);
+const programsByDept = {
+    "Education":              ["Bachelor of Elementary Education (BEEd)","Bachelor of Secondary Education (BSEd) - Major in English","Bachelor of Secondary Education (BSEd) - Major in Mathematics","Bachelor of Secondary Education (BSEd) - Major in Science","Bachelor of Secondary Education (BSEd) - Major in Filipino"],
+    "Business Administration":["BS in Accountancy (BSA)","BS in Business Administration - Major in Financial Management","BS in Business Administration - Major in Marketing Management","BS in Business Administration - Major in Human Resource Management","BS in Entrepreneurship"],
+    "Computer Studies":       ["BS in Computer Science (BSCS)","BS in Information Technology (BSIT)","BS in Computer Engineering (BSCpE)","BS in Information Systems (BSIS)"],
+    "Engineering":            ["BS in Civil Engineering (BSCE)","BS in Electrical Engineering (BSEE)","BS in Electronics Engineering (BSECE)","BS in Mechanical Engineering (BSME)"],
+    "Nursing":                ["BS in Nursing (BSN)"],
+    "Theology":               ["Bachelor of Arts in Theology (AB Theology)","Bachelor of Theology (BTh)"]
+};
 
 function handleLevelChange(level) {
     const yearWrap = document.getElementById('yearLevelWrap');
