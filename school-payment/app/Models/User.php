@@ -59,6 +59,13 @@ class User extends Authenticatable
         // Extra info for non-student roles
         'extra_info',
         'profile_picture',
+
+        // Student drop / status fields
+        'status',           // 'active' | 'dropped'
+        'drop_reason',
+        'drop_notes',
+        'dropped_at',
+        'dropped_by_name',
     ];
 
     protected $hidden = [
@@ -73,6 +80,7 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'birth_date'        => 'date',
             'age'               => 'integer',
+            'dropped_at'        => 'datetime',
         ];
     }
 

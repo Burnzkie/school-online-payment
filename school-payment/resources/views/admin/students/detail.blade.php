@@ -30,7 +30,7 @@
 {{-- Drop Student Modal --}}
 <div id="drop-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
      style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
         <div class="flex items-center gap-3 mb-5">
             <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
                  style="background:#fff1f2; border:1px solid #fecdd3;">🚫</div>
