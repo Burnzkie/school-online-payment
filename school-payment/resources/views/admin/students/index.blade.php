@@ -19,6 +19,11 @@
         <option value="{{ $lg }}" {{ request('level_group')===$lg?'selected':'' }}>{{ $lg }}</option>
         @endforeach
     </select>
+    <select name="status" class="a-input a-select w-40">
+        <option value="">All Status</option>
+        <option value="active"  {{ request('status')==='active'  ? 'selected' : '' }}>Active</option>
+        <option value="dropped" {{ request('status')==='dropped' ? 'selected' : '' }}>Dropped</option>
+    </select>
     <button type="submit" class="a-btn-primary px-5">Filter</button>
     <a href="{{ route('admin.students') }}" class="a-btn-secondary">Reset</a>
 </form>
@@ -27,7 +32,7 @@
     <div class="overflow-x-auto">
         <table class="a-table">
             <thead>
-                <tr><th>Student</th><th>Level / Program</th><th>Year Level</th><th>Student ID</th><th>Balance</th><th>Actions</th></tr>
+                <tr><th>Student</th><th>Level / Program</th><th>Year Level</th><th>Student ID</th><th>Balance</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 @forelse($students as $s)
@@ -67,11 +72,18 @@
                         @endif
                     </td>
                     <td>
+                        @if(($s->status ?? 'active') === 'dropped')
+                            <span class="a-badge a-badge-red">Dropped</span>
+                        @else
+                            <span class="a-badge a-badge-emerald">Active</span>
+                        @endif
+                    </td>
+                    <td>
                         <a href="{{ route('admin.students.detail', $s) }}" class="a-btn-secondary text-xs py-1.5 px-3">View</a>
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="6" class="text-center py-12 text-gray-400">No students found.</td></tr>
+                <tr><td colspan="7" class="text-center py-12 text-gray-400">No students found.</td></tr>
                 @endforelse
             </tbody>
         </table>

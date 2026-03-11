@@ -117,6 +117,8 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 require __DIR__ . '/auth.php';
+// Email verification routes (verification.notice / verification.verify / verification.send)
+// are defined inside auth.php.
 
 /*
 |--------------------------------------------------------------------------
@@ -145,6 +147,8 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
     Route::get('/students',                          [AdminController::class, 'students'])->name('students');
     Route::get('/students/{student}',                [AdminController::class, 'studentDetail'])->name('students.detail');
     Route::post('/students/{student}/link-parent',   [AdminController::class, 'studentLinkParent'])->name('students.link-parent');
+    Route::patch('/students/{student}/drop',         [AdminController::class, 'studentDrop'])->name('students.drop');
+    Route::patch('/students/{student}/reinstate',    [AdminController::class, 'studentReinstate'])->name('students.reinstate');
 
     // ── Fee Management ─────────────────────────────────────────────────────
     Route::get('/fees',                              [AdminController::class, 'fees'])->name('fees');
@@ -200,7 +204,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified'])->prefix('student')->name('student.')->group(function () {
+Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureStudentIsActive::class])->prefix('student')->name('student.')->group(function () {
 
     Route::get('/dashboard', [StudentDashboardController::class, 'index'])
          ->name('dashboard');
@@ -242,7 +246,7 @@ Route::middleware(['auth', 'verified'])->prefix('student')->name('student.')->gr
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', \App\Http\Middleware\EnsureHighSchoolStudent::class])
+Route::middleware(['auth', \App\Http\Middleware\EnsureHighSchoolStudent::class, \App\Http\Middleware\EnsureStudentIsActive::class])
      ->prefix('hs')
      ->name('hs.')
      ->group(function () {

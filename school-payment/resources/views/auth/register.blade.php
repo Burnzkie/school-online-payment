@@ -287,7 +287,7 @@
                                 </div>
                             </div>
                             <!-- (remaining student fields: level, address, parents - keep existing structure) -->
-                            <div class="border-t border-slate-700 pt-6" id="year-level-group" style="display:none">
+                            <div class="border-t border-slate-700 pt-6 hidden" id="year-level-group">
                                 <h3 class="text-lg font-semibold mb-4 text-blue-400">Year / Grade Level</h3>
                                 <input type="hidden" name="level_group" id="level_group" value="{{ old('level_group') }}">
                                 <div>
@@ -326,6 +326,172 @@
                                     </div>
                                 </div>
                             </div>
+
+                            {{-- ── Address ── --}}
+                            <div class="border-t border-slate-700 pt-6">
+                                <h3 class="text-lg font-semibold mb-4 text-blue-400">
+                                    <i class="fas fa-map-marker-alt mr-2"></i>Address
+                                </h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="col-span-2">
+                                        <label class="block text-sm font-medium mb-2">Street / House No.</label>
+                                        <input type="text" name="street" value="{{ old('street') }}"
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                               placeholder="e.g. 123 Rizal St.">
+                                        @error('street')
+                                            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">Barangay</label>
+                                        <input type="text" name="barangay" value="{{ old('barangay') }}"
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                               placeholder="Barangay">
+                                        @error('barangay')
+                                            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">Municipality</label>
+                                        <input type="text" name="municipality" value="{{ old('municipality') }}"
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                               placeholder="Municipality">
+                                        @error('municipality')
+                                            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="block text-sm font-medium mb-2">City / Province</label>
+                                        <input type="text" name="city" value="{{ old('city') }}"
+                                               class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                               placeholder="City or Province">
+                                        @error('city')
+                                            <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- ── Student ID ── --}}
+                            <div class="border-t border-slate-700 pt-6">
+                                <h3 class="text-lg font-semibold mb-4 text-blue-400">
+                                    <i class="fas fa-id-card mr-2"></i>Student ID
+                                </h3>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Student ID Number</label>
+                                    <input type="text" name="student_id" value="{{ old('student_id') }}"
+                                           class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                           placeholder="e.g. 2025-00123">
+                                    <p class="text-xs text-slate-500 mt-1">
+                                        <i class="fas fa-info-circle text-sky-300 mr-1"></i>
+                                        Leave blank if not yet assigned — you can update this later from your profile.
+                                    </p>
+                                    @error('student_id')
+                                        <p class="mt-2 text-sm text-red-400">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            {{-- ── Family Information ── --}}
+                            <div class="border-t border-slate-700 pt-6">
+                                <h3 class="text-lg font-semibold mb-4 text-blue-400">
+                                    <i class="fas fa-users mr-2"></i>Family Information
+                                </h3>
+
+                                {{-- Father --}}
+                                <div class="mb-6">
+                                    <p class="text-sm font-semibold text-slate-300 mb-3">👨 Father</p>
+                                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                        <div class="sm:col-span-3">
+                                            <label class="block text-sm font-medium mb-2">Full Name</label>
+                                            <input type="text" name="father_name" value="{{ old('father_name') }}"
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="Father's full name">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Occupation</label>
+                                            <input type="text" name="father_occupation" value="{{ old('father_occupation') }}"
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="e.g. Farmer, Engineer">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Contact Number</label>
+                                            <input type="tel" name="father_contact" value="{{ old('father_contact') }}"
+                                                   class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="09XX XXX XXXX" pattern="[0-9]{11}" maxlength="11">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Mother --}}
+                                <div class="mb-6">
+                                    <p class="text-sm font-semibold text-slate-300 mb-3">👩 Mother</p>
+                                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                        <div class="sm:col-span-3">
+                                            <label class="block text-sm font-medium mb-2">Full Name</label>
+                                            <input type="text" name="mother_name" value="{{ old('mother_name') }}"
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="Mother's full name">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Occupation</label>
+                                            <input type="text" name="mother_occupation" value="{{ old('mother_occupation') }}"
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="e.g. Nurse, Teacher">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Contact Number</label>
+                                            <input type="tel" name="mother_contact" value="{{ old('mother_contact') }}"
+                                                   class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="09XX XXX XXXX" pattern="[0-9]{11}" maxlength="11">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Guardian --}}
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-300 mb-3">🧑 Guardian <span class="text-xs text-slate-500 font-normal">(if different from parents)</span></p>
+                                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                        <div class="sm:col-span-3">
+                                            <label class="block text-sm font-medium mb-2">Full Name</label>
+                                            <input type="text" name="guardian_name" value="{{ old('guardian_name') }}"
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="Guardian's full name">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Relationship</label>
+                                            <input type="text" name="guardian_relationship" value="{{ old('guardian_relationship') }}"
+                                                   class="auto-capitalize w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="e.g. Aunt, Uncle, Sibling">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium mb-2">Contact Number</label>
+                                            <input type="tel" name="guardian_contact" value="{{ old('guardian_contact') }}"
+                                                   class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/30 transition"
+                                                   placeholder="09XX XXX XXXX" pattern="[0-9]{11}" maxlength="11">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Emergency Contact Preference --}}
+                                <div class="mt-5 p-4 rounded-xl" style="background: rgba(14,165,233,0.07); border: 1px solid rgba(14,165,233,0.18);">
+                                    <label class="block text-sm font-medium mb-3">
+                                        <i class="fas fa-phone-alt text-sky-400 mr-1"></i>
+                                        Emergency Contact
+                                    </label>
+                                    <div class="flex flex-wrap gap-3">
+                                        @foreach(['father' => '👨 Father', 'mother' => '👩 Mother', 'guardian' => '🧑 Guardian'] as $val => $label)
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="radio" name="emergency_contact" value="{{ $val }}"
+                                                   {{ old('emergency_contact', 'father') === $val ? 'checked' : '' }}
+                                                   class="accent-sky-400">
+                                            <span class="text-sm font-medium">{{ $label }}</span>
+                                        </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
 
                         {{-- ══════════════════════════════════════
@@ -947,15 +1113,18 @@
             const levelGroupInput = document.getElementById('level_group');
             const yearLevelGroup  = document.getElementById('year-level-group');
             if (!badge || age < 3) { yearLevelGroup?.classList.add('hidden'); return; }
+
             let key = null;
-            if (age < 7) key = 'kinder';
+            if (age < 7)       key = 'kinder';
             else if (age <= 12) key = 'elementary';
-            else if (age <= 16) key = 'junior';
-            else key = 'adult';
+            else if (age <= 15) key = 'junior';
+            else                key = 'adult';   // 16+ → let them choose: JHS / SHS / College
+
             if (key === 'adult') {
                 badge.innerHTML = `<span class="font-semibold">Choose your level: </span>
                     <select onchange="chooseAdultLevel(this)" class="bg-slate-800 border border-slate-600 rounded px-3 py-1 ml-2 text-emerald-300 outline-none focus:border-blue-500">
                         <option value="">-- Select Level --</option>
+                        <option value="junior">Junior High School</option>
                         <option value="senior">Senior High School</option>
                         <option value="college">College</option>
                     </select>`;
@@ -965,6 +1134,7 @@
                 document.getElementById('college-group')?.classList.add('hidden');
                 return;
             }
+
             const data = educationData[key];
             badge.innerHTML = `<span class="font-semibold">Detected Level: </span><span class="text-emerald-400">${data.label}</span>`;
             levelGroupInput.value = data.label;
@@ -980,7 +1150,17 @@
             const levelGroupInput = document.getElementById('level_group');
             const yearLevelGroup  = document.getElementById('year-level-group');
             if (!val) { yearLevelGroup?.classList.add('hidden'); return; }
-            if (val === 'senior') {
+
+            if (val === 'junior') {
+                badge.innerHTML = `<span class="font-semibold">Selected Level: </span><span class="text-emerald-400">Junior High School</span>
+                    <button type="button" onclick="calculateLevel()" class="ml-2 text-xs text-blue-400 hover:text-blue-300">(change)</button>`;
+                levelGroupInput.value = 'Junior High School';
+                populateYearLevel(educationData.junior.levels);
+                yearLevelGroup?.classList.remove('hidden');
+                document.getElementById('strand-group')?.classList.add('hidden');
+                document.getElementById('college-group')?.classList.add('hidden');
+
+            } else if (val === 'senior') {
                 badge.innerHTML = `<span class="font-semibold">Selected Level: </span><span class="text-emerald-400">Senior High School</span>
                     <button type="button" onclick="calculateLevel()" class="ml-2 text-xs text-blue-400 hover:text-blue-300">(change)</button>`;
                 levelGroupInput.value = 'Senior High School';
@@ -988,6 +1168,7 @@
                 yearLevelGroup?.classList.remove('hidden');
                 document.getElementById('strand-group')?.classList.remove('hidden');
                 document.getElementById('college-group')?.classList.add('hidden');
+
             } else {
                 badge.innerHTML = `<span class="font-semibold">Selected Level: </span><span class="text-emerald-400">College</span>
                     <button type="button" onclick="calculateLevel()" class="ml-2 text-xs text-blue-400 hover:text-blue-300">(change)</button>`;

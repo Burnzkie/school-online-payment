@@ -4,8 +4,83 @@
 
 @section('content')
 
-<div class="a-fade">
-    <a href="{{ route('admin.students') }}" class="a-btn-secondary text-xs mb-4 inline-flex">← Back to Students</a>
+<div class="a-fade flex items-center justify-between">
+    <a href="{{ route('admin.students') }}" class="a-btn-secondary text-xs inline-flex">← Back to Students</a>
+
+    {{-- Drop / Reinstate action --}}
+    @if($student->status === 'dropped')
+        <form method="POST" action="{{ route('admin.students.reinstate', $student) }}"
+              onsubmit="return confirm('Reinstate {{ $student->name }} {{ $student->last_name }}? Their account will be restored to active.')">
+            @csrf @method('PATCH')
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all"
+                    style="background: linear-gradient(135deg,#059669,#34d399);">
+                ✅ Reinstate Student
+            </button>
+        </form>
+    @else
+        <button type="button" onclick="document.getElementById('drop-modal').classList.remove('hidden')"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all"
+                style="background: linear-gradient(135deg,#e11d48,#f43f5e);">
+            🚫 Drop Student
+        </button>
+    @endif
+</div>
+
+{{-- Drop Student Modal --}}
+<div id="drop-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7">
+        <div class="flex items-center gap-3 mb-5">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                 style="background:#fff1f2; border:1px solid #fecdd3;">🚫</div>
+            <div>
+                <h3 class="font-bold text-gray-800">Drop Student</h3>
+                <p class="text-xs text-gray-400 mt-0.5">{{ $student->name }} {{ $student->last_name }}</p>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.students.drop', $student) }}">
+            @csrf @method('PATCH')
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                    Reason for Dropping <span class="text-red-500">*</span>
+                </label>
+                <select name="drop_reason" required
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 mb-3"
+                        onchange="document.getElementById('other-reason').classList.toggle('hidden', this.value !== 'Other')">
+                    <option value="">Select reason…</option>
+                    <option value="Voluntarily Withdrew">Voluntarily Withdrew</option>
+                    <option value="Financial Difficulties">Financial Difficulties</option>
+                    <option value="Academic Failure">Academic Failure</option>
+                    <option value="Transferred to Another School">Transferred to Another School</option>
+                    <option value="Health Reasons">Health Reasons</option>
+                    <option value="Disciplinary Action">Disciplinary Action</option>
+                    <option value="Other">Other…</option>
+                </select>
+                <div id="other-reason" class="hidden">
+                    <input type="text" name="drop_reason_other" placeholder="Specify reason…"
+                           class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100">
+                </div>
+            </div>
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Notes <span class="font-normal normal-case text-gray-400">(optional)</span></label>
+                <textarea name="drop_notes" rows="3" placeholder="Additional remarks…"
+                          class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none"></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="submit"
+                        class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+                        style="background: linear-gradient(135deg,#e11d48,#f43f5e);">
+                    Confirm Drop
+                </button>
+                <button type="button" onclick="document.getElementById('drop-modal').classList.add('hidden')"
+                        class="flex-1 py-2.5 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 {{-- Student Header --}}
@@ -46,6 +121,29 @@
         </div>
     </div>
 </div>
+
+{{-- Dropout Banner --}}
+@if($student->status === 'dropped')
+<div class="flex items-start gap-4 px-6 py-5 rounded-2xl a-fade a-d1"
+     style="background:#fff1f2; border:1px solid #fecdd3;">
+    <span class="text-2xl flex-shrink-0">🚫</span>
+    <div class="flex-1">
+        <p class="font-bold text-red-700 text-sm">This student has been dropped from the school.</p>
+        <p class="text-xs text-red-500 mt-0.5">
+            Reason: <span class="font-semibold">{{ $student->drop_reason ?? '—' }}</span>
+            @if($student->dropped_at)
+                &nbsp;·&nbsp; Dropped on {{ \Carbon\Carbon::parse($student->dropped_at)->format('M d, Y') }}
+            @endif
+            @if($student->dropped_by_name)
+                &nbsp;·&nbsp; By {{ $student->dropped_by_name }}
+            @endif
+        </p>
+        @if($student->drop_notes)
+            <p class="text-xs text-red-400 mt-1 italic">{{ $student->drop_notes }}</p>
+        @endif
+    </div>
+</div>
+@endif
 
 {{-- Summary Cards --}}
 <div class="grid grid-cols-3 gap-4 a-fade a-d2">

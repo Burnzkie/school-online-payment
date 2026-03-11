@@ -262,7 +262,8 @@ class AdminController extends Controller
                 $b->where('name',       'like', "%{$request->q}%")
                   ->orWhere('student_id','like', "%{$request->q}%")
                   ->orWhere('email',     'like', "%{$request->q}%")))
-            ->when($request->level_group, fn($q) => $q->where('level_group', $request->level_group));
+            ->when($request->level_group, fn($q) => $q->where('level_group', $request->level_group))
+            ->when($request->status, fn($q) => $q->where('status', $request->status));
 
         $students    = $query->orderBy('name')->paginate(25)->withQueryString();
         $levelGroups = User::where('role', 'student')->distinct()->pluck('level_group')->filter()->sort()->values();
@@ -348,6 +349,70 @@ class AdminController extends Controller
         }
 
         return back()->with('success', "Linked {$parent->name} to {$student->name}.");
+    }
+
+    public function studentDrop(Request $request, User $student)
+    {
+        abort_unless($student->role === 'student', 404);
+
+        $request->validate([
+            'drop_reason'       => 'required|string|max:255',
+            'drop_reason_other' => 'nullable|string|max:255',
+            'drop_notes'        => 'nullable|string|max:1000',
+        ]);
+
+        // If "Other" was selected, use the custom typed reason instead
+        $reason = $request->drop_reason === 'Other'
+            ? ($request->drop_reason_other ?: 'Other')
+            : $request->drop_reason;
+
+        $student->update([
+            'status'          => 'dropped',
+            'drop_reason'     => $reason,
+            'drop_notes'      => $request->drop_notes,
+            'dropped_at'      => now(),
+            'dropped_by_name' => Auth::user()->name . ' ' . Auth::user()->last_name,
+        ]);
+
+        // Put student on financial hold automatically
+        $currentYear = $this->currentSchoolYear();
+        StudentClearance::updateOrCreate(
+            ['student_id' => $student->id, 'school_year' => $currentYear],
+            ['is_cleared' => false, 'hold_reason' => 'Student dropped: ' . $reason]
+        );
+
+        Log::info('Student dropped', [
+            'student_id'  => $student->id,
+            'student'     => $student->name . ' ' . $student->last_name,
+            'reason'      => $reason,
+            'dropped_by'  => Auth::id(),
+        ]);
+
+        return redirect()->route('admin.students.detail', $student)
+            ->with('success', "{$student->name} {$student->last_name} has been dropped. Their clearance has been placed on hold.");
+    }
+
+    public function studentReinstate(Request $request, User $student)
+    {
+        abort_unless($student->role === 'student', 404);
+        abort_unless($student->status === 'dropped', 422, 'Student is not currently dropped.');
+
+        $student->update([
+            'status'          => 'active',
+            'drop_reason'     => null,
+            'drop_notes'      => null,
+            'dropped_at'      => null,
+            'dropped_by_name' => null,
+        ]);
+
+        Log::info('Student reinstated', [
+            'student_id'     => $student->id,
+            'student'        => $student->name . ' ' . $student->last_name,
+            'reinstated_by'  => Auth::id(),
+        ]);
+
+        return redirect()->route('admin.students.detail', $student)
+            ->with('success', "{$student->name} {$student->last_name} has been reinstated successfully.");
     }
 
     // =========================================================================
