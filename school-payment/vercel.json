@@ -1,15 +1,13 @@
 {
   "version": 2,
   "framework": null,
-  "builds": [
-    {
-      "src": "api/index.php",
-      "use": "vercel-php@0.6.0",
-      "config": {
-        "buildCommand": "composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist"
-      }
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.6.0"
     }
-  ],
+  },
+  "buildCommand": "bash build.sh",
+  "outputDirectory": ".",
   "routes": [
     {
       "src": "/(.*)",
