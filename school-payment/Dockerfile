@@ -43,7 +43,7 @@ COPY . .
 
 # Create minimal production .env (Let Render DATABASE_URL take priority)
 RUN rm -f .env && cat > .env << 'EOF'
-APP_NAME=School Online Payment
+APP_NAME="School Online Payment"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://${RENDER_EXTERNAL_HOSTNAME:-localhost}
