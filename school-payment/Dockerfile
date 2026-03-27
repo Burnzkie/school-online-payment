@@ -14,7 +14,7 @@ RUN composer install \
     --ignore-platform-reqs
 
 # =============================================================================
-# Stage 2: Production image with PHP + Apache
+# Stage 2: Production image with PHP + Apache + PostgreSQL
 # =============================================================================
 FROM php:8.3-apache
 
@@ -31,11 +31,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     unzip \
     git \
-    libpq-dev \                  # Important for PostgreSQL
+    libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
-        pdo_pgsql \                  # PostgreSQL PDO driver
-        pgsql \                      # PostgreSQL driver
+        pdo_pgsql \
+        pgsql \
         zip \
         gd \
         mbstring \
@@ -55,9 +55,9 @@ COPY --from=composer /app/composer.* /var/www/html/
 # Copy application files
 COPY . .
 
-# Remove any existing .env and create a minimal one
+# Create minimal .env file
 RUN rm -f .env \
-    && echo "APP_NAME=${APP_NAME:-Laravel}" > .env \
+    && echo "APP_NAME=Laravel" > .env \
     && echo "APP_ENV=production" >> .env \
     && echo "APP_DEBUG=false" >> .env \
     && echo "APP_URL=http://localhost" >> .env \
@@ -77,14 +77,14 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# Configure Apache to point to Laravel public folder
+# Configure Apache
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 EXPOSE 80
 
-# Startup command - Uses DATABASE_URL from Render (best practice)
+# Startup command
 CMD php artisan key:generate --force --no-interaction \
     && php artisan config:clear \
     && php artisan cache:clear \
