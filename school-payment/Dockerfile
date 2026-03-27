@@ -39,12 +39,12 @@ COPY --from=composer /app/composer.* /var/www/html/
 # Copy the entire Laravel project
 COPY . .
 
-# Create minimal production .env file
+# Create minimal .env (Laravel will prefer DATABASE_URL if set)
 RUN rm -f .env && cat > .env << 'EOF'
 APP_NAME=Laravel
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=http://localhost
+APP_URL=https://${RENDER_EXTERNAL_HOSTNAME:-localhost}
 LOG_CHANNEL=stderr
 LOG_LEVEL=debug
 DB_CONNECTION=pgsql
