@@ -41,20 +41,20 @@ COPY . .
 
 
 
-RUN rm -f .env && cat > .env << 'EOF'
-APP_NAME="School Online Payment"
-APP_ENV=production
-APP_DEBUG=false
-LOG_CHANNEL=stderr
-LOG_LEVEL=debug
-DB_CONNECTION=pgsql
-SESSION_DRIVER=database
-SESSION_LIFETIME=120
-QUEUE_CONNECTION=database
-CACHE_STORE=database
-FILESYSTEM_DISK=local
-BROADCAST_CONNECTION=log
-EOF
+#RUN rm -f .env && cat > .env << 'EOF'
+#APP_NAME="School Online Payment"
+#APP_ENV=production
+#APP_DEBUG=false
+#LOG_CHANNEL=stderr
+#LOG_LEVEL=debug
+#DB_CONNECTION=pgsql
+#SESSION_DRIVER=database
+#SESSION_LIFETIME=120
+#QUEUE_CONNECTION=database
+#CACHE_STORE=database
+#FILESYSTEM_DISK=local
+#BROADCAST_CONNECTION=log
+#EOF
 
 # Set permissions
 RUN mkdir -p storage/framework/{sessions,views,cache} \
