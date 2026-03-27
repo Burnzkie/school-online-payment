@@ -39,9 +39,11 @@ COPY --from=composer /app/composer.* /var/www/html/
 # Copy the entire Laravel project
 COPY . .
 
-# Create minimal .env (Laravel will prefer DATABASE_URL if set)
+
+
+# Create minimal production .env (Let Render DATABASE_URL take priority)
 RUN rm -f .env && cat > .env << 'EOF'
-APP_NAME=Laravel
+APP_NAME=School Online Payment
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://${RENDER_EXTERNAL_HOSTNAME:-localhost}
