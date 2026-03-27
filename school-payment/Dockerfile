@@ -1,18 +1,29 @@
 # =============================================================================
-# Multi-stage build for Laravel + PostgreSQL on Render
+# Stage 1: Composer dependencies (without running artisan scripts)
 # =============================================================================
 FROM composer:2 AS composer
 
 WORKDIR /app
-COPY composer.json composer.lock* ./
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --ignore-platform-reqs
 
+COPY composer.json composer.lock* ./
+
+# Install dependencies WITHOUT running post-autoload scripts
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    --ignore-platform-reqs \
+    --no-scripts
+
+# =============================================================================
+# Stage 2: Final production image
 # =============================================================================
 FROM php:8.3-apache
 
 WORKDIR /var/www/html
 
-# Install dependencies and PHP extensions for PostgreSQL
+# Install system dependencies + PostgreSQL support
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev libjpeg-dev libfreetype6-dev libzip-dev libonig-dev \
     libxml2-dev libicu-dev unzip git libpq-dev \
@@ -21,15 +32,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && a2enmod rewrite \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy vendor from composer stage
+# Copy vendor folder from composer stage
 COPY --from=composer /app/vendor /var/www/html/vendor
 COPY --from=composer /app/composer.* /var/www/html/
 
-# Copy the rest of the application
+# Copy the entire Laravel project
 COPY . .
 
-# Create minimal production .env
-RUN rm -f .env && cat > .env << EOF
+# Create minimal production .env file
+RUN rm -f .env && cat > .env << 'EOF'
 APP_NAME=Laravel
 APP_ENV=production
 APP_DEBUG=false
@@ -50,14 +61,14 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# Apache configuration
+# Configure Apache to serve from /public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
     && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 EXPOSE 80
 
-# Final startup command
+# Final startup - run artisan commands here (after all files are copied)
 CMD php artisan key:generate --force --no-interaction \
     && php artisan config:clear \
     && php artisan cache:clear \
