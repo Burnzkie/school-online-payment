@@ -91,7 +91,6 @@ php artisan migrate --force
 echo "Caching configs..."
 php artisan cache:clear
 php artisan route:cache
-php artisan view:cache
 
 echo "Starting Apache..."
 exec apache2-foreground
