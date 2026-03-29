@@ -80,14 +80,18 @@ cd /var/www/html
 echo "Generating application key..."
 php artisan key:generate --force --no-interaction
 
-echo "Clearing and caching configs..."
+echo "Clearing config cache..."
 php artisan config:clear
-php artisan cache:clear
-php artisan route:cache
-php artisan view:cache
+php artisan route:clear
+php artisan view:clear
 
 echo "Running migrations..."
 php artisan migrate --force
+
+echo "Caching configs..."
+php artisan cache:clear
+php artisan route:cache
+php artisan view:cache
 
 echo "Starting Apache..."
 exec apache2-foreground
