@@ -107,7 +107,8 @@
             <p class="text-slate-500 text-sm mt-1.5">Manage your tuition charges and payment records.</p>
         </div>
         <div class="flex items-center gap-3 bl-no-print">
-            @if(($balance ?? 0) > 0)
+            @php $__prevBal = $previousBalance ?? 0; $__totalBal = ($balance ?? 0) + $__prevBal; @endphp
+            @if($__totalBal > 0)
             <button onclick="document.getElementById('bl-pay-modal').classList.remove('hidden')"
                     class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all"
                     style="background: linear-gradient(135deg,#059669,#10b981);">
@@ -117,7 +118,7 @@
                 Pay Online
             </button>
             @endif
-            @if(!isset($activePlan) && ($balance ?? 0) > 0)
+            @if(!isset($activePlan) && $__totalBal > 0)
             <a href="{{ route('student.installments') }}"
                class="bl-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -240,7 +241,11 @@
 
             {{-- Balance Card --}}
             @php
-                $paidPct = ($totalCharges ?? 0) > 0 ? round((($paid ?? 0) / ($totalCharges ?? 1)) * 100) : 0;
+                $prevSemBal  = $previousBalance ?? 0;
+                $curSemBal   = $balance ?? 0;
+                $totalBal    = $curSemBal + $prevSemBal;
+                $totalDue    = ($totalCharges ?? 0) + $prevSemBal;
+                $paidPct     = $totalDue > 0 ? round((($paid ?? 0) / $totalDue) * 100) : 0;
             @endphp
             <div class="bl-card-shimmer relative overflow-hidden rounded-2xl p-6 sm:p-7 shadow-xl card-lift"
                  style="background: linear-gradient(135deg,#7f1d1d,#b91c1c,#991b1b); color: white; min-height: 170px;">
@@ -251,19 +256,34 @@
                 <div class="relative">
                     <p class="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-3">Current Balance</p>
                     <p class="font-mono-num text-4xl sm:text-5xl font-extrabold leading-none tabular-nums">
-                        ₱{{ number_format($balance ?? 0, 2) }}
+                        ₱{{ number_format($totalBal, 2) }}
                     </p>
+                    @if($prevSemBal > 0)
+                    <div class="mt-2 space-y-0.5">
+                        <div class="flex justify-between text-[10px] font-semibold opacity-75">
+                            <span>This Semester</span>
+                            <span class="font-mono-num">₱{{ number_format($curSemBal, 2) }}</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-semibold opacity-75">
+                            <span class="flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse"></span>
+                                Previous Semester
+                            </span>
+                            <span class="font-mono-num">₱{{ number_format($prevSemBal, 2) }}</span>
+                        </div>
+                    </div>
+                    @endif
                     <div class="bl-progress-track">
                         <div class="bl-progress-fill" style="width: {{ $paidPct }}%"></div>
                     </div>
                     <div class="flex items-center justify-between mt-2">
                         <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm">
-                            <span class="w-1.5 h-1.5 rounded-full {{ ($balance ?? 0) > 0 ? 'bg-amber-300 animate-pulse' : 'bg-emerald-300' }}"></span>
-                            {{ ($balance ?? 0) > 0 ? 'Outstanding' : 'Fully Paid ✓' }}
+                            <span class="w-1.5 h-1.5 rounded-full {{ $totalBal > 0 ? 'bg-amber-300 animate-pulse' : 'bg-emerald-300' }}"></span>
+                            {{ $totalBal > 0 ? 'Outstanding' : 'Fully Paid ✓' }}
                         </div>
                         <span class="text-xs font-bold opacity-60">{{ $paidPct }}% paid</span>
                     </div>
-                    @if(($balance ?? 0) > 0)
+                    @if($totalBal > 0)
                     <button onclick="document.getElementById('bl-pay-modal').classList.remove('hidden')"
                             class="bl-no-print mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
                             style="background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);color:white;backdrop-filter:blur(8px);"
@@ -391,17 +411,39 @@
                         <td class="px-6 py-4 text-right font-mono-num font-bold text-emerald-600 text-sm">₱{{ number_format($totalPayments ?? 0, 2) }}</td>
                     </tr>
 
-                    {{-- Remaining Balance Row --}}
-                    <tr style="background: linear-gradient(135deg, #4f46e5, #6366f1);">
-                        <td class="px-6 py-5">
+                    {{-- Previous Semester Carryover --}}
+                    @if(($previousBalance ?? 0) > 0)
+                    <tr style="background:#fffbeb; border-top: 1px solid #fde68a;">
+                        <td class="px-6 py-4" colspan="2">
                             <div class="flex items-center gap-2">
-                                <div class="w-2 h-2 rounded-full {{ ($balance ?? 0) > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400' }}"></div>
+                                <div class="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></div>
+                                <span class="text-amber-800 font-bold text-sm">Previous Semester Balance</span>
+                            </div>
+                            <p class="text-amber-500 text-[10px] mt-0.5 pl-4">Unpaid balance carried over from prior semester</p>
+                        </td>
+                        <td class="px-6 py-4 text-right font-mono-num font-bold text-amber-700 text-sm">
+                            + ₱{{ number_format($previousBalance, 2) }}
+                        </td>
+                    </tr>
+                    @endif
+
+                    {{-- Remaining Balance Row --}}
+                    @php $__grandTotal = ($balance ?? 0) + ($previousBalance ?? 0); @endphp
+                    <tr style="background: linear-gradient(135deg, #4f46e5, #6366f1);">
+                        <td class="px-6 py-5" colspan="1">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full {{ $__grandTotal > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400' }}"></div>
                                 <span class="text-white font-black text-sm uppercase tracking-wider">Remaining Balance</span>
                             </div>
+                            @if(($previousBalance ?? 0) > 0)
+                            <p class="text-indigo-200 text-[10px] mt-0.5 pl-4">
+                                ₱{{ number_format($balance ?? 0, 2) }} current + ₱{{ number_format($previousBalance, 2) }} previous
+                            </p>
+                            @endif
                         </td>
                         <td colspan="2" class="px-6 py-5 text-right">
                             <span class="font-mono-num font-extrabold text-2xl text-white tabular-nums">
-                                ₱{{ number_format($balance ?? 0, 2) }}
+                                ₱{{ number_format($__grandTotal, 2) }}
                             </span>
                         </td>
                     </tr>
@@ -467,7 +509,7 @@
              style="background:#fef3c7; border:1.5px solid #fde68a;">
             <div>
                 <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Outstanding Balance</p>
-                <p class="font-mono-num text-2xl font-extrabold text-amber-800 mt-0.5">₱{{ number_format($balance ?? 0, 2) }}</p>
+                <p class="font-mono-num text-2xl font-extrabold text-amber-800 mt-0.5">₱{{ number_format(($balance ?? 0) + ($previousBalance ?? 0), 2) }}</p>
             </div>
             <div class="w-12 h-12 rounded-xl flex items-center justify-center"
                  style="background:#fef9c3;">
@@ -642,8 +684,8 @@
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400 select-none">₱</span>
                             <input type="number" name="amount" step="0.01" min="1"
-                                   max="{{ $balance ?? 999999 }}"
-                                   value="{{ $balance ?? '' }}"
+                                   max="{{ ($balance ?? 0) + ($previousBalance ?? 0) }}"
+                                   value="{{ ($balance ?? 0) + ($previousBalance ?? 0) }}"
                                    placeholder="0.00" required
                                    class="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 font-mono-num font-bold text-lg focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all">
                         </div>
