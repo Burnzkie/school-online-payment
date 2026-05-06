@@ -5,78 +5,139 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Models\Fee;
+use App\Models\Payment;
+
 
 class BillingController extends Controller
 {
     public function index(Request $request)
     {
         $student = Auth::user();
-        
-        // Get selected year and semester from request
-        $selectedYear = $request->input('school_year', '2025-2026');
-        $selectedSemester = $request->input('semester', '2');
-        
-        // Get available years for dropdown
-        $availableYears = DB::table('fees')
-            ->where('id', $student->id)
-            ->distinct()
+
+        // ── Available years (from DB, most recent first) ──────────────────────
+        $availableYears = Fee::where('student_id', $student->id)
+            ->distinct('school_year')
+            ->orderByDesc('school_year')
             ->pluck('school_year')
             ->toArray();
-        
+
         if (empty($availableYears)) {
-            $availableYears = ['2025-2026', '2024-2025'];
+            $availableYears = [$this->currentSchoolYear()];
         }
-        
-        // Get fees for selected semester
-        $fees = DB::table('fees')
-            ->where('id', $student->id)
+
+        // ── Selected period (defaults to current year & semester) ─────────────
+        $selectedYear     = $request->input('school_year', $availableYears[0] ?? $this->currentSchoolYear());
+        $selectedSemester = $request->input('semester', $this->currentSemester());
+
+        // ── Current semester fees & payments ──────────────────────────────────
+        $fees = Fee::where('student_id', $student->id)
             ->where('school_year', $selectedYear)
             ->where('semester', $selectedSemester)
             ->get();
-        
-        // Get payments for selected semester
-        $payments = DB::table('payments')
-            ->where('student_id', $student->id)
+
+        $payments = Payment::where('student_id', $student->id)
             ->where('school_year', $selectedYear)
             ->where('semester', $selectedSemester)
-            ->orderBy('payment_date', 'asc')
+            ->where('status', 'completed')
+            ->orderBy('payment_date')
             ->get();
-        
-        // Build ledger items
+
+        $totalCharges = $fees->sum('amount');
+        $totalPaid    = $payments->sum('amount');
+        $balance      = max(0, $totalCharges - $totalPaid);
+
+        // ── Previous semester carryover balance ───────────────────────────────
+        [$prevYear, $prevSemester] = $this->previousPeriod($selectedYear, $selectedSemester);
+
+        $prevCharges = Fee::where('student_id', $student->id)
+            ->where('school_year', $prevYear)
+            ->where('semester', $prevSemester)
+            ->sum('amount');
+
+        $prevPaid = Payment::where('student_id', $student->id)
+            ->where('school_year', $prevYear)
+            ->where('semester', $prevSemester)
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $previousBalance = max(0, $prevCharges - $prevPaid);
+
+        // ── Build ledger ──────────────────────────────────────────────────────
         $ledgerItems = [];
-        
-        // Add fees as charges
+
         foreach ($fees as $fee) {
             $ledgerItems[] = [
-                'description' => $fee->fee_name . ($fee->description ? ' - ' . $fee->description : ''),
-                'charge' => $fee->amount,
-                'payment' => 0,
+                'description' => $fee->fee_name . ($fee->description ? ' — ' . $fee->description : ''),
+                'charge'      => $fee->amount,
+                'payment'     => 0,
             ];
         }
-        
-        // Add payments
+
         foreach ($payments as $payment) {
+            $ref = $payment->or_number
+                ? 'OR# ' . $payment->or_number
+                : ($payment->reference_number ? 'Ref# ' . $payment->reference_number : null);
+
             $ledgerItems[] = [
-                'description' => 'PAYMENT - OR: ' . ($payment->or_number ?? $payment->reference_number) . ' - ' . strtoupper($payment->payment_method),
-                'charge' => 0,
-                'payment' => $payment->amount,
+                'description' => 'Payment — ' . strtoupper($payment->payment_method) . ($ref ? ' (' . $ref . ')' : ''),
+                'charge'      => 0,
+                'payment'     => $payment->amount,
             ];
         }
-        
-        // Calculate totals
-        $totalCharges = $fees->sum('amount');
-        $totalPaid = $payments->sum('amount');
-        $balance = $totalCharges - $totalPaid;
-        
+
+
         return view('students.college.billing', [
-            'selectedYear' => $selectedYear,
-            'selectedSemester' => $selectedSemester,
-            'availableYears' => $availableYears,
-            'balance' => $balance,
-            'paid' => $totalPaid,
-            'totalCharges' => $totalCharges,
-            'ledgerItems' => $ledgerItems,
+            'selectedYear'    => $selectedYear,
+            'selectedSemester'=> $selectedSemester,
+            'availableYears'  => $availableYears,
+            'balance'         => $balance,
+            'paid'            => $totalPaid,
+            'totalCharges'    => $totalCharges,
+            'ledgerItems'     => $ledgerItems,
+            'previousBalance' => $previousBalance,
+            
         ]);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private function currentSchoolYear(): string
+    {
+        $month = (int) date('n');
+        $year  = (int) date('Y');
+        // June onwards = new school year
+        return ($month >= 6)
+            ? $year . '-' . ($year + 1)
+            : ($year - 1) . '-' . $year;
+    }
+
+    private function currentSemester(): string
+    {
+        $month = (int) date('n');
+        // Aug–Dec = 1st sem | Jan–Jul = 2nd sem
+        return ($month >= 8) ? '1' : '2';
+    }
+
+    /**
+     * Returns [prevYear, prevSemester] for the carryover calculation.
+     *
+     * 1st Sem  → 2nd Sem of previous school year
+     * 2nd Sem  → 1st Sem of same school year
+     * Summer   → 2nd Sem of same school year
+     */
+    private function previousPeriod(string $year, string $semester): array
+    {
+        if ($semester === '1') {
+            [$start, $end] = explode('-', $year);
+            return [($start - 1) . '-' . ($end - 1), '2'];
+        }
+
+        if ($semester === '2') {
+            return [$year, '1'];
+        }
+
+        // summer
+        return [$year, '2'];
     }
 }

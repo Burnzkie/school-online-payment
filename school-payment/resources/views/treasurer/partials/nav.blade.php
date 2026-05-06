@@ -5,7 +5,6 @@ $nav = [
     ['route' => 'treasurer.fees',         'icon' => '🏷️',  'label' => 'Fee Management', 'desc' => 'Assign & manage fees'],
     ['route' => 'treasurer.payments',     'icon' => '💳', 'label' => 'Payments',        'desc' => 'Transaction history'],
     ['route' => 'treasurer.students',     'icon' => '🎓', 'label' => 'Students',        'desc' => 'Accounts & balances'],
-    ['route' => 'treasurer.installments', 'icon' => '📅', 'label' => 'Installments',    'desc' => 'Payment plans'],
     ['route' => 'treasurer.clearances',   'icon' => '🚫', 'label' => 'Clearances',      'desc' => 'Hold & clear students'],
     ['route' => 'treasurer.scholarships', 'icon' => '🎓', 'label' => 'Scholarships',    'desc' => 'Discounts & aid'],
     ['route' => 'treasurer.aging',        'icon' => '📉', 'label' => 'Aging Report',    'desc' => '30/60/90 day buckets'],

@@ -78,7 +78,6 @@
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 a-fade a-d2">
     @foreach([
         ['l'=>'Pending Payments',    'v'=>$pendingPayments,    'c'=>'#d97706'],
-        ['l'=>'Overdue Installments','v'=>$overdueCount,       'c'=>'#e11d48'],
         ['l'=>'On Hold Students',    'v'=>$onHoldCount,        'c'=>'#e11d48'],
         ['l'=>'Active Scholarships', 'v'=>$activeScholarships, 'c'=>'#4f46e5'],
     ] as $s)

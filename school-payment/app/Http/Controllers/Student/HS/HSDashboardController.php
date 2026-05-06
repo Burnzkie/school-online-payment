@@ -1,107 +1,129 @@
 <?php
-// app/Http/Controllers/Student/HS/HSDashboardController.php
 
-namespace App\Http\Controllers\Student\HS;
+namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Fee;
-use App\Models\Payment;
-use App\Models\StudentFee;
+use Carbon\Carbon;
 
-class HSDashboardController extends Controller
+class StudentDashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $user = Auth::user();
-        $isJHS = str_contains(strtolower($user->level_group ?? ''), 'junior');
-        $isSHS = str_contains(strtolower($user->level_group ?? ''), 'senior');
+        $student = Auth::user();
 
-        $schoolYear = $this->currentSchoolYear();
-
-        // For JHS, no semester. For SHS, determine current semester.
-        $semester = null;
-        if ($isSHS) {
-            $semester = $this->currentSemester();
+        // Redirect HS students to their own portal
+        $levelGroup = strtolower($student->level_group ?? '');
+        if (str_contains($levelGroup, 'junior') || str_contains($levelGroup, 'senior')) {
+            return redirect()->route('hs.dashboard');
         }
 
-        // Query fees for this student
-        $feesQuery = Fee::where('student_id', $user->id)
-            ->where('school_year', $schoolYear)
-            ->where('status', 'active');
+        // ── Current school year & semester ────────────────────────────────────
+        $currentYear     = $this->currentSchoolYear();
+        $currentSemester = $request->get('semester', $this->currentSemester());
 
-        if ($isSHS && $semester) {
-            $feesQuery->where('semester', $semester);
-        }
+        // ── Fees ──────────────────────────────────────────────────────────────
+        $totalCharges = $student->fees()
+            ->where('school_year', $currentYear)
+            ->where('semester', $currentSemester)
+            ->where('status', 'active')
+            ->sum('amount');
 
-        $fees = $feesQuery->get();
-        $totalCharges = $fees->sum('amount');
-
-        // Query payments
-        $paymentsQuery = Payment::where('student_id', $user->id)
-            ->where('school_year', $schoolYear)
-            ->where('status', 'completed');
-
-        if ($isSHS && $semester) {
-            $paymentsQuery->where('semester', $semester);
-        }
-
-        $totalPaid = $paymentsQuery->sum('amount');
-        $balance = max(0, $totalCharges - $totalPaid);
-        $progress = $totalCharges > 0 ? min(100, round(($totalPaid / $totalCharges) * 100)) : 0;
-
-        // Recent payments (last 5)
-        $recentQuery = Payment::where('student_id', $user->id)
+        // ── Payments ──────────────────────────────────────────────────────────
+        $totalPaid = $student->payments()
+            ->where('school_year', $currentYear)
+            ->where('semester', $currentSemester)
             ->where('status', 'completed')
-            ->latest('payment_date')
-            ->limit(5);
+            ->sum('amount');
 
-        if ($isSHS && $semester) {
-            $recentQuery->where('semester', $semester);
+        // ── Previous semester carryover balance ───────────────────────────────
+        [$prevYear, $prevSemester] = $this->previousPeriod($currentYear, $currentSemester);
+
+        $prevCharges = $student->fees()
+            ->where('school_year', $prevYear)
+            ->where('semester', $prevSemester)
+            ->where('status', 'active')
+            ->sum('amount');
+
+        $prevPaid = $student->payments()
+            ->where('school_year', $prevYear)
+            ->where('semester', $prevSemester)
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $previousBalance = max(0, $prevCharges - $prevPaid);
+
+        // ── Derived values ────────────────────────────────────────────────────
+        $balance  = max(0, $totalCharges - $totalPaid) + $previousBalance;
+        $progress = $totalCharges > 0
+            ? min(100, round(($totalPaid / $totalCharges) * 100))
+            : 0;
+
+        // ── Recent payments (last 5) ──────────────────────────────────────────
+        try {
+            $recentPayments = $student->payments()
+                ->where('status', 'completed')
+                ->orderByDesc('payment_date')
+                ->limit(5)
+                ->get()
+                ->map(fn($p) => [
+                    'date'   => Carbon::parse($p->payment_date)->format('M d, Y'),
+                    'amount' => $p->amount,
+                    'method' => $p->payment_method,
+                ]);
+        } catch (\Exception $e) {
+            $recentPayments = collect();
         }
 
-        $recentPayments = $recentQuery->get()->map(function($p) {
-            return [
-                'date'   => \Carbon\Carbon::parse($p->payment_date),
-                'amount' => $p->amount,
-                'method' => $p->payment_method,
-            ];
-        });
-
-        // Next due date (from installment schedule) — uses model scopes
-        $nextDue = \App\Models\InstallmentSchedule::forStudent($user->id)
-            ->unpaid()
-            ->orderBy('due_date')
-            ->first();
-
-        $nextDueDate = $nextDue ? \Carbon\Carbon::parse($nextDue->due_date)->format('M d, Y') : null;
-
-        return view('students.hs.dashboard', compact(
-            'balance', 'totalPaid', 'totalCharges', 'progress',
-            'recentPayments', 'nextDueDate', 'schoolYear', 'semester',
-            'isJHS', 'isSHS'
-        ))->with([
+        return view('students.college.dashboard', compact(
+            'balance',
+            'totalPaid',
+            'totalCharges',
+            'progress',
+            'recentPayments',
+            'currentYear',
+            'currentSemester',
+        ) + [
             'paid'  => $totalPaid,
             'total' => $totalCharges,
         ]);
     }
 
+    public function paymentCreate()
+    {
+        return redirect()->route('student.billing');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private function currentSchoolYear(): string
     {
         $month = (int) date('n');
         $year  = (int) date('Y');
-        // School year typically starts June
-        if ($month >= 6) {
-            return $year . '-' . ($year + 1);
-        }
-        return ($year - 1) . '-' . $year;
+        return ($month >= 6)
+            ? $year . '-' . ($year + 1)
+            : ($year - 1) . '-' . $year;
     }
 
     private function currentSemester(): string
     {
         $month = (int) date('n');
-        // 1st sem: Aug–Dec, 2nd sem: Jan–May
-        return ($month >= 8 || $month <= 12 && $month >= 8) ? '1' : '2';
+        return ($month >= 8) ? '1' : '2';
+    }
+
+    private function previousPeriod(string $year, string $semester): array
+    {
+        if ($semester === '1') {
+            [$start, $end] = explode('-', $year);
+            return [($start - 1) . '-' . ($end - 1), '2'];
+        }
+
+        if ($semester === '2') {
+            return [$year, '1'];
+        }
+
+        // summer
+        return [$year, '2'];
     }
 }

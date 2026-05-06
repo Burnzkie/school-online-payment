@@ -66,6 +66,7 @@ class User extends Authenticatable
         'drop_notes',
         'dropped_at',
         'dropped_by_name',
+        'dark_mode',
     ];
 
     protected $hidden = [
@@ -81,6 +82,7 @@ class User extends Authenticatable
             'birth_date'        => 'date',
             'age'               => 'integer',
             'dropped_at'        => 'datetime',
+            'dark_mode'         => 'boolean',
         ];
     }
 

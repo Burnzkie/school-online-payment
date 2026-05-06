@@ -3,14 +3,12 @@
 
 use App\Http\Controllers\Student\StudentDashboardController;
 use App\Http\Controllers\Student\BillingController;
-use App\Http\Controllers\Student\InstallmentPlanController;
 use App\Http\Controllers\Student\StatementController;
 use App\Http\Controllers\Student\StudentProfileController;
 
 // ── HS Controllers ──────────────────────────────────────────────────────────
 use App\Http\Controllers\Student\HS\HSDashboardController;
 use App\Http\Controllers\Student\HS\HSBillingController;
-use App\Http\Controllers\Student\HS\HSInstallmentPlanController;
 use App\Http\Controllers\Student\HS\HSStatementController;
 use App\Http\Controllers\Student\HS\HSProfileController;
 
@@ -29,6 +27,8 @@ use Illuminate\Support\Facades\Route;
 // _____Parent Controller_______
 use App\Http\Controllers\Parent\ParentController;
 
+use App\Http\Controllers\UserSettingsController;
+
 /*
 |--------------------------------------------------------------------------
 | Public API — Student Search (used on the registration form)
@@ -39,6 +39,22 @@ use App\Http\Controllers\Parent\ParentController;
 Route::get('/api/students/search', [ParentController::class, 'searchStudents'])
      ->name('api.students.search');
 
+/*
+|--------------------------------------------------------------------------
+| Dark Mode Toggle — Shared Across ALL Portals
+| Works for every role: admin, cashier, treasurer, parent, student (college + hs)
+| Auto-saves to the users table (dark_mode column) via AJAX on toggle.
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')
+     ->post('/user/settings/dark-mode', [UserSettingsController::class, 'toggleDarkMode'])
+     ->name('user.settings.dark-mode');
+
+/*
+|--------------------------------------------------------------------------
+| Parent Portal Routes
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth', \App\Http\Middleware\EnsureParent::class])
      ->prefix('parent')
      ->name('parent.')
@@ -114,7 +130,7 @@ Route::get('/dashboard', function () {
 
     // Fallback for any unrecognized role
     return redirect('/register')->with('status', 'Your account role (' . $user->role . ') does not have a portal yet. Please contact the administrator.');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
 require __DIR__ . '/auth.php';
 // Email verification routes (verification.notice / verification.verify / verification.send)
@@ -176,8 +192,6 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
     Route::patch('/clearances/{clearance}/grant',    [AdminController::class, 'clearanceGrant'])->name('clearances.grant');
     Route::patch('/clearances/{clearance}/hold',     [AdminController::class, 'clearanceHold'])->name('clearances.hold');
 
-    // ── Installments ───────────────────────────────────────────────────────
-    Route::get('/installments',                      [AdminController::class, 'installments'])->name('installments');
 
     // ── Reports ────────────────────────────────────────────────────────────
     Route::get('/reports',                           [AdminController::class, 'reports'])->name('reports');
@@ -218,11 +232,6 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureStudentIsActiv
     Route::post('/billing/pay-online', [BillingController::class, 'payOnline'])
          ->name('billing.pay-online');
 
-    Route::get('/installments', [InstallmentPlanController::class, 'index'])
-         ->name('installments');
-
-    Route::post('/installments/choose', [InstallmentPlanController::class, 'store'])
-         ->name('installments.choose');
 
     Route::get('/statements', [StatementController::class, 'index'])
          ->name('statements');
@@ -260,11 +269,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureHighSchoolStudent::class, 
     Route::post('/billing/pay-online', [HSBillingController::class, 'payOnline'])
          ->name('billing.pay-online');
 
-    Route::get('/installments', [HSInstallmentPlanController::class, 'index'])
-         ->name('installments');
 
-    Route::post('/installments/choose', [HSInstallmentPlanController::class, 'store'])
-         ->name('installments.choose');
 
     Route::get('/statements', [HSStatementController::class, 'index'])
          ->name('statements');
@@ -387,8 +392,6 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureTreasurer::class])
     // Statement of Account (SOA)
     Route::get('/students/{student}/soa',                      [TreasurerController::class, 'soa'])->name('soa');
 
-    // Installments Overview
-    Route::get('/installments',                                [TreasurerController::class, 'installments'])->name('installments');
 
     // Aging Report
     Route::get('/aging',                                       [TreasurerController::class, 'aging'])->name('aging');

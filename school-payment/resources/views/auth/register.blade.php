@@ -41,8 +41,6 @@
                     <p class="text-xs font-semibold mt-0.5" style="color: #7dd3fc;">"The School That Prepares Students to Serve."</p>
                 </div>
             </div>
-            <p class="font-extrabold text-white leading-tight mb-1" style="font-size:2.6rem;">School Fees,</p>
-            <p class="font-extrabold leading-tight mb-6" style="font-size:2.6rem; background: linear-gradient(135deg,#38bdf8,#22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Made Simple.</p>
             <p class="text-sm font-medium mb-7" style="color: rgba(255,255,255,0.55);">Kinder &nbsp;&middot;&nbsp; Elementary &nbsp;&middot;&nbsp; Junior High &nbsp;&middot;&nbsp; Senior High &nbsp;&middot;&nbsp; College</p>
             <div class="flex flex-wrap gap-2">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold" style="background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.32); color: #7dd3fc;">✅ Online Payment Tracking</span>

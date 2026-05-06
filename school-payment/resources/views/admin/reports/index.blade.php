@@ -73,46 +73,6 @@
 
 </div>
 
-{{-- Aging Report --}}
-<div class="a-card a-fade a-d3">
-    <div class="px-6 py-4 border-b border-gray-100">
-        <h3 class="font-bold text-gray-800">Accounts Receivable Aging</h3>
-        <p class="text-xs mt-0.5 text-gray-400">Based on installment due dates · {{ $schoolYear }} Sem {{ $semester }}</p>
-    </div>
-    <div class="overflow-x-auto">
-        <table class="a-table">
-            <thead><tr><th>Age Range</th><th>Amount</th><th>Risk</th><th>%</th></tr></thead>
-            <tbody>
-                @php $totalAging = array_sum($aging) ?: 1; @endphp
-                @foreach([
-                    ['Current (Not Yet Due)', 'current', 'a-badge-emerald', 'Low'],
-                    ['1-30 Days Overdue',      '1-30',   'a-badge-amber',   'Medium'],
-                    ['31-60 Days',             '31-60',  'a-badge-red',     'High'],
-                    ['61-90 Days',             '61-90',  'a-badge-red',     'High'],
-                    ['90+ Days (Critical)',    '90+',    'a-badge-red',     'Critical'],
-                ] as [$label,$key,$badge,$risk])
-                @php $pct = $aging[$key] > 0 ? round($aging[$key]/$totalAging*100) : 0; @endphp
-                <tr>
-                    <td class="font-semibold text-gray-800">{{ $label }}</td>
-                    <td class="font-bold font-mono-num text-indigo-600">₱{{ number_format($aging[$key],2) }}</td>
-                    <td><span class="a-badge {{ $badge }}">{{ $risk }}</span></td>
-                    <td class="w-40">
-                        <div class="flex items-center gap-2">
-                            <div class="a-progress-track flex-1"><div class="a-progress-fill" style="width:{{ $pct }}%;"></div></div>
-                            <span class="text-xs text-gray-400">{{ $pct }}%</span>
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-                <tr class="border-t-2 border-gray-200">
-                    <td class="font-bold text-gray-800">Total Outstanding</td>
-                    <td class="font-bold font-mono-num text-gray-800">₱{{ number_format(array_sum($aging),2) }}</td>
-                    <td colspan="2"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
 
 {{-- Fee Head Breakdown --}}
 <div class="a-card a-fade a-d4">

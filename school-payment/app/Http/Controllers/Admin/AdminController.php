@@ -5,8 +5,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Fee;
-use App\Models\InstallmentPlan;
-use App\Models\InstallmentSchedule;
 use App\Models\Payment;
 use App\Models\Scholarship;
 use App\Models\StudentClearance;
@@ -36,7 +34,6 @@ class AdminController extends Controller
             ['route' => 'admin.payments',       'label' => 'Payments',      'icon' => '🧾', 'desc' => 'Transaction log'],
             ['route' => 'admin.scholarships',   'label' => 'Scholarships',  'icon' => '🎓', 'desc' => 'Discounts & waivers'],
             ['route' => 'admin.clearances',     'label' => 'Clearances',    'icon' => '✅', 'desc' => 'Hold management'],
-            ['route' => 'admin.installments',   'label' => 'Installments',  'icon' => '📅', 'desc' => 'Payment plans'],
             ['route' => 'admin.reports',        'label' => 'Reports',       'icon' => '📊', 'desc' => 'Analytics & exports'],
             ['route' => 'admin.settings',       'label' => 'Settings',      'icon' => '⚙️', 'desc' => 'System config'],
             ['route' => 'admin.profile',        'label' => 'Profile',       'icon' => '🧑', 'desc' => 'My account'],
@@ -109,9 +106,8 @@ class AdminController extends Controller
             ->orderByDesc('payment_date')
             ->limit(8)->get();
 
-        // Overdue installments
-        $overdueCount = InstallmentSchedule::where('is_paid', false)
-            ->where('due_date', '<', today())->count();
+        // Overdue installments (feature removed)
+        $overdueCount = 0;
 
         // Clearance stats
         $clearedCount = StudentClearance::where('school_year', $currentYear)
@@ -290,11 +286,6 @@ class AdminController extends Controller
         $totalPaid = $payments->where('status', 'completed')->sum('amount');
         $balance   = max(0, $totalFees - $totalPaid);
 
-        $installmentPlan = InstallmentPlan::with('schedules')
-            ->where('student_id', $student->id)
-            ->where('school_year', $currentYear)
-            ->where('status', 'active')->first();
-
         $scholarships = Scholarship::where('student_id', $student->id)
             ->where('school_year', $currentYear)->where('status', 'active')->get();
 
@@ -314,7 +305,6 @@ class AdminController extends Controller
             'totalFees'       => $totalFees,
             'totalPaid'       => $totalPaid,
             'balance'         => $balance,
-            'installmentPlan' => $installmentPlan,
             'scholarships'    => $scholarships,
             'clearance'       => $clearance,
             'linkedParents'   => $linkedParents,
@@ -779,37 +769,6 @@ class AdminController extends Controller
     // INSTALLMENTS
     // =========================================================================
 
-    public function installments(Request $request)
-    {
-        $query = InstallmentPlan::with(['student', 'schedules'])
-            ->when($request->school_year, fn($q) => $q->where('school_year', $request->school_year))
-            ->when($request->semester,    fn($q) => $q->where('semester', $request->semester))
-            ->when($request->status,      fn($q) => $q->where('status', $request->status))
-            ->when($request->q, fn($q) => $q->whereHas('student', fn($sq) =>
-                $sq->where('name', 'like', "%{$request->q}%")
-                  ->orWhere('student_id', 'like', "%{$request->q}%")));
-
-        $plans = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
-
-        $overdueSchedules = InstallmentSchedule::with(['plan.student'])
-            ->where('is_paid', false)->where('due_date', '<', today())
-            ->orderBy('due_date')->limit(10)->get();
-
-        $schoolYears = InstallmentPlan::distinct()->pluck('school_year')->sortDesc();
-
-        $stats = [
-            'active'    => InstallmentPlan::where('status', 'active')->count(),
-            'completed' => InstallmentPlan::where('status', 'completed')->count(),
-            'overdue'   => InstallmentSchedule::where('is_paid', false)->where('due_date', '<', today())->count(),
-        ];
-
-        return view('admin.installments.index', array_merge([
-            'plans'            => $plans,
-            'overdueSchedules' => $overdueSchedules,
-            'schoolYears'      => $schoolYears,
-            'stats'            => $stats,
-        ], ['nav' => $this->nav()]));
-    }
 
     // =========================================================================
     // REPORTS
@@ -854,15 +813,6 @@ class AdminController extends Controller
                 'balance' => max(0, ($fees[$s->id] ?? 0) - ($paid[$s->id] ?? 0)),
             ])->filter(fn($r) => $r['balance'] > 0)->sortByDesc('balance')->values();
 
-        // Aging buckets
-        $aging = [
-            'current' => InstallmentSchedule::where('is_paid', false)->where('due_date', '>=', today())->sum('amount_due'),
-            '1-30'    => InstallmentSchedule::where('is_paid', false)->whereBetween('due_date', [today()->subDays(30), today()->subDays(1)])->sum('amount_due'),
-            '31-60'   => InstallmentSchedule::where('is_paid', false)->whereBetween('due_date', [today()->subDays(60), today()->subDays(31)])->sum('amount_due'),
-            '61-90'   => InstallmentSchedule::where('is_paid', false)->whereBetween('due_date', [today()->subDays(90), today()->subDays(61)])->sum('amount_due'),
-            '90+'     => InstallmentSchedule::where('is_paid', false)->where('due_date', '<', today()->subDays(90))->sum('amount_due'),
-        ];
-
         $schoolYears = Fee::distinct()->pluck('school_year')->merge(Payment::distinct()->pluck('school_year'))
             ->unique()->sortDesc()->values();
 
@@ -871,7 +821,6 @@ class AdminController extends Controller
             'byLevel'     => $byLevel,
             'byFee'       => $byFee,
             'defaulters'  => $defaulters,
-            'aging'       => $aging,
             'schoolYear'  => $schoolYear,
             'semester'    => $semester,
             'schoolYears' => $schoolYears,

@@ -1,12 +1,13 @@
 {{-- resources/views/parent/layouts/app.blade.php --}}
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="scroll-smooth {{auth()->user()?->dark_mode ? 'dark' : ''}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Parent Portal') – PAC</title>
     @include('partials.favicon')
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
@@ -31,8 +32,26 @@
     </style>
     @stack('styles')
 </head>
-<body class="min-h-screen flex" style="background-color: #f9fafb;">
-
+<body class="min-h-screen flex"
+    style="background-color: var(--bg);"
+        x-data=" {
+            dark: {{auth()->user()?->dark_mode ? 'true' : 'false'}},
+                async toggleDark(){
+                    this.dark = !this.dark;
+                        document.documentElement.classList.toggle('dark', this.dark);
+                            try {
+                            await fetch('{{route('user.settings.dark-mode')}}',{
+                            method: 'POST',
+                            headers:{
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                            },
+                            body: JSON.stringify({dark_mode: this.dark})
+                            });
+                            } catch(e) {console.warn('Dark mode save failed:', e); }
+                             }
+                            }">
+    
     {{-- ── Sidebar ── --}}
     <aside id="sidebar"
            class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200
@@ -76,7 +95,7 @@
             </a>
             @endforeach
             @endif
-
+            
             <div class="mt-4 mb-2 px-4">
                 <p class="text-xs uppercase tracking-widest text-gray-400 font-bold">Account</p>
             </div>
@@ -143,6 +162,26 @@
                 <p class="text-xs text-gray-400 mt-0.5">@yield('breadcrumb')</p>
                 @endif
             </div>
+            {{-- Dark Mode Toggle --}}
+            <button @click="toggleDark()"
+                    class="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200"
+                    style="color: var(--muted);"
+                    onmouseover="this.style.background='var(--bg3)'; this.style.color='var(--text)'"
+                    onmouseout="this.style.background=''; this.style.color='var(--muted)'"
+                    :title="dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+                <svg x-show="!dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75
+                            0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21
+                            12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                </svg>
+                <svg x-show="dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591
+                            M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636
+                            5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+                </svg>
+            </button>
             {{-- Notification bell --}}
             <a href="{{ route('parent.notifications') }}" class="relative text-gray-400 hover:text-indigo-600 transition">
                 <i class="fas fa-bell text-lg"></i>

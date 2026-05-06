@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full scroll-smooth">
+<html lang="en" class="h-full scroll-smooth {{ auth()->user()?->dark_mode ? 'dark' : '' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Treasurer') • PAC Treasurer Portal</title>
     @include('partials.favicon')
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    @include('partials.darkmode')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
@@ -211,7 +214,36 @@
     </style>
 </head>
 
-<body class="h-full flex flex-col bg-gray-50" x-data="{ mobileMenuOpen: false }">
+<body class="h-full flex flex-col"
+      style="background-color: var(--bg);"
+      x-data="{
+          mobileMenuOpen: false,
+          dark: {{ auth()->user()?->dark_mode ? 'true' : 'false' }},
+          async toggleDark() {
+              this.dark = !this.dark;
+              document.documentElement.classList.toggle('dark', this.dark);
+              try {
+                  const res = await fetch('{{ route('user.settings.dark-mode') }}', {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                      },
+                      body: JSON.stringify({ dark_mode: this.dark })
+                  });
+                  if (!res.ok) {
+                      this.dark = !this.dark;
+                      document.documentElement.classList.toggle('dark', this.dark);
+                      console.error('Dark mode save failed — HTTP ' + res.status);
+                  }
+              } catch(e) {
+                  this.dark = !this.dark;
+                  document.documentElement.classList.toggle('dark', this.dark);
+                  console.error('Dark mode network error:', e);
+              }
+          }
+      }"
+      @keydown.escape="mobileMenuOpen = false">
 
     <!-- ═══ TOP HEADER ═══ -->
     <header class="sticky top-0 z-40 flex items-center justify-between px-4 py-3 sm:px-6 bg-white shadow-sm border-b border-gray-100">
@@ -239,6 +271,26 @@
             <span class="hidden sm:block text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
                 S.Y. {{ date('n') >= 8 ? date('Y').'-'.(date('Y')+1) : (date('Y')-1).'-'.date('Y') }}
             </span>
+            {{-- Dark Mode Toggle --}}
+            <button @click="toggleDark()"
+                    class="w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200"
+                    style="color: var(--muted);"
+                    onmouseover="this.style.background='var(--bg3)'; this.style.color='var(--text)'"
+                    onmouseout="this.style.background=''; this.style.color='var(--muted)'"
+                    :title="dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+                <svg x-show="!dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75
+                            0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21
+                            12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                </svg>
+                <svg x-show="dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591
+                            M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636
+                            5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+                </svg>
+            </button>
             <a href="{{ route('treasurer.profile') }}"
                class="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition text-sm font-semibold">
                 @if(filled(auth()->user()->profile_picture) && \Illuminate\Support\Facades\Storage::disk('public')->exists(auth()->user()->profile_picture))
