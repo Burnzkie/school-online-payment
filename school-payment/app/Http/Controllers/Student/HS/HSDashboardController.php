@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
-class HSStudentDashboardController extends Controller
+class HSDashboardController extends Controller
 {
     public function index(Request $request)
     {
