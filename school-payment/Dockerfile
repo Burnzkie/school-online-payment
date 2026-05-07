@@ -17,7 +17,20 @@ RUN composer install \
     --no-scripts
 
 # =============================================================================
-# Stage 2: Final production image
+# Stage 2: Node.js - Build Vite assets
+# =============================================================================
+FROM node:20-alpine AS node
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+# =============================================================================
+# Stage 3: Final production image
 # =============================================================================
 FROM php:8.3-apache
 
@@ -35,6 +48,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy vendor folder from composer stage
 COPY --from=composer /app/vendor /var/www/html/vendor
 COPY --from=composer /app/composer.* /var/www/html/
+
+# Copy built Vite assets from node stage
+COPY --from=node /app/public/build /var/www/html/public/build
 
 # Copy the entire Laravel project
 COPY . .
