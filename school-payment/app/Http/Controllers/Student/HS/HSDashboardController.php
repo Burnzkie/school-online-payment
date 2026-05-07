@@ -13,12 +13,6 @@ class HSDashboardController extends Controller
     {
         $student = Auth::user();
 
-        // Redirect HS students to their own portal
-        $levelGroup = strtolower($student->level_group ?? '');
-        if (str_contains($levelGroup, 'junior') || str_contains($levelGroup, 'senior')) {
-            return redirect()->route('hs.dashboard');
-        }
-
         // ── Current school year & semester ────────────────────────────────────
         $currentYear     = $this->currentSchoolYear();
         $currentSemester = $request->get('semester', $this->currentSemester());
