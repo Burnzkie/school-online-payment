@@ -19,9 +19,14 @@ class AppServiceProvider extends ServiceProvider
             Request::HEADER_X_FORWARDED_PROTO
         );
 
-        // Force HTTPS in production
+        // Force HTTPS always when behind Render/Cloudflare proxy
+        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            URL::forceScheme('https');
+        }
+
+        // Also force HTTPS in production as fallback
         if (config('app.env') === 'production') {
-            \URL::forceScheme('https');
+            URL::forceScheme('https');
         }
     }
 }
