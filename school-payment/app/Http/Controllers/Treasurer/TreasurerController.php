@@ -7,8 +7,6 @@ use App\Models\User;
 use App\Models\Fee;
 use App\Models\Payment;
 use App\Models\StudentFee;
-use App\Models\InstallmentPlan;
-use App\Models\InstallmentSchedule;
 use App\Models\Scholarship;
 use App\Models\StudentClearance;
 use Illuminate\Http\Request;
@@ -83,26 +81,6 @@ class TreasurerController extends Controller
             ->limit(8)
             ->get();
 
-        // Overdue installments
-        $overdueCount = InstallmentSchedule::where('is_paid', false)
-            ->where('due_date', '<', today())
-            ->count();
-
-        // ── Aging buckets (based on installment due dates) ──────────────────
-        $aging = [
-            '1-30'  => InstallmentSchedule::where('is_paid', false)
-                ->whereBetween('due_date', [today()->subDays(30), today()])
-                ->sum('amount_due'),
-            '31-60' => InstallmentSchedule::where('is_paid', false)
-                ->whereBetween('due_date', [today()->subDays(60), today()->subDays(31)])
-                ->sum('amount_due'),
-            '61-90' => InstallmentSchedule::where('is_paid', false)
-                ->whereBetween('due_date', [today()->subDays(90), today()->subDays(61)])
-                ->sum('amount_due'),
-            '90+'   => InstallmentSchedule::where('is_paid', false)
-                ->where('due_date', '<', today()->subDays(90))
-                ->sum('amount_due'),
-        ];
 
         // ── Collection rate ───────────────────────────────────────────────────
         $collectionRate = $totalFees > 0
@@ -139,8 +117,8 @@ class TreasurerController extends Controller
             'totalRevenue', 'monthlyRevenue', 'pendingPayments',
             'totalStudents', 'paidStudents', 'unpaidStudents',
             'totalFees', 'outstanding', 'monthlyChart',
-            'revenueByLevel', 'recentPayments', 'overdueCount', 'currentYear',
-            'aging', 'collectionRate', 'topDelinquent', 'onHoldCount', 'activeScholarships'
+            'revenueByLevel', 'recentPayments', 'currentYear',
+            'collectionRate', 'topDelinquent', 'onHoldCount', 'activeScholarships'
         ));
     }
 
@@ -516,11 +494,7 @@ class TreasurerController extends Controller
             ->orderByDesc('payment_date')
             ->get();
 
-        $installmentPlan = InstallmentPlan::where('student_id', $student->id)
-            ->where('school_year', $currentYear)
-            ->with('schedules')
-            ->latest()
-            ->first();
+        $installmentPlan = null; // InstallmentPlan model removed
 
         $totalFees = $fees->where('school_year', $currentYear)->where('status', 'active')->sum('amount');
         $totalPaid = $payments->where('school_year', $currentYear)->where('status', 'completed')->sum('amount');
@@ -548,29 +522,14 @@ class TreasurerController extends Controller
     // ─────────────────────────────────────────────
     public function installments(Request $request)
     {
-        $query = InstallmentPlan::with(['student', 'schedules'])
-            ->when($request->school_year, fn($q) => $q->where('school_year', $request->school_year))
-            ->when($request->semester,    fn($q) => $q->where('semester', $request->semester))
-            ->when($request->status,      fn($q) => $q->where('status', $request->status))
-            ->when($request->search,      fn($q) => $q->whereHas('student', fn($sq) =>
-                $sq->where('name', 'like', "%{$request->search}%")
-                   ->orWhere('student_id', 'like', "%{$request->search}%")));
-
-        $plans = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
-
-        $overdueSchedules = InstallmentSchedule::with(['plan.student'])
-            ->where('is_paid', false)
-            ->where('due_date', '<', today())
-            ->orderBy('due_date')
-            ->limit(10)
-            ->get();
-
-        $schoolYears = InstallmentPlan::distinct()->pluck('school_year')->sortDesc();
-
+        // InstallmentPlan and InstallmentSchedule models have been removed.
+        $plans            = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20);
+        $overdueSchedules = collect();
+        $schoolYears      = collect();
         $stats = [
-            'active'    => InstallmentPlan::where('status', 'active')->count(),
-            'completed' => InstallmentPlan::where('status', 'completed')->count(),
-            'overdue'   => InstallmentSchedule::where('is_paid', false)->where('due_date', '<', today())->count(),
+            'active'    => 0,
+            'completed' => 0,
+            'overdue'   => 0,
         ];
 
         return view('treasurer.installments', compact('plans', 'overdueSchedules', 'schoolYears', 'stats'));
@@ -680,12 +639,7 @@ class TreasurerController extends Controller
         $totalPaid = $payments->sum('amount');
         $balance   = max(0, $totalNet - $totalPaid);
 
-        $installmentPlan = InstallmentPlan::where('student_id', $student->id)
-            ->where('school_year', $schoolYear)
-            ->where('semester', $semester)
-            ->with('schedules')
-            ->latest()
-            ->first();
+        $installmentPlan = null; // InstallmentPlan model removed
 
         $clearance = StudentClearance::where('student_id', $student->id)
             ->where('school_year', $schoolYear)
@@ -726,14 +680,8 @@ class TreasurerController extends Controller
             ->groupBy('student_id')
             ->pluck('total_paid', 'student_id');
 
-        // For aging, use the earliest unpaid installment due date as the reference
-        $earliestDue = InstallmentSchedule::where('is_paid', false)
-            ->join('installment_plans', 'installment_schedules.installment_plan_id', '=', 'installment_plans.id')
-            ->where('installment_plans.school_year', $schoolYear)
-            ->where('installment_plans.semester', $semester)
-            ->select('installment_schedules.student_id', DB::raw('MIN(due_date) as earliest_due'))
-            ->groupBy('installment_schedules.student_id')
-            ->pluck('earliest_due', 'student_id');
+        // InstallmentSchedule model removed — due date aging defaults to current bucket
+        \$earliestDue = collect();
 
         $students = User::where('role', 'student')
             ->whereIn('id', $studentFees->keys())
