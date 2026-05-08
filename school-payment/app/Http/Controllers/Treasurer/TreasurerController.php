@@ -681,7 +681,7 @@ class TreasurerController extends Controller
             ->pluck('total_paid', 'student_id');
 
         // InstallmentSchedule model removed — due date aging defaults to current bucket
-        \$earliestDue = collect();
+        $earliestDue = collect();
 
         $students = User::where('role', 'student')
             ->whereIn('id', $studentFees->keys())
