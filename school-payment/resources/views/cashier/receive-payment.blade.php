@@ -29,7 +29,9 @@
         <p class="text-sm mt-1.5 text-gray-400">Record a student payment and issue an official receipt.</p>
     </div>
 
-    <form method="POST" action="{{ route('cashier.receive-payment.store') }}" class="space-y-5">
+    <form method="POST" action="{{ route('cashier.receive-payment.store') }}" class="space-y-5"
+          x-data="{ submitting: false }"
+          @submit="if(submitting){ $event.preventDefault(); return; } submitting = true">
         @csrf
 
         {{-- ── Student Selection ── --}}
@@ -163,9 +165,10 @@
                 <div>
                     <label class="rp-label">School Year *</label>
                     <select name="school_year" required class="c-input c-select">
+                        @php $defaultYear = date('n') >= 8 ? date('Y').'-'.(date('Y')+1) : (date('Y')-1).'-'.date('Y'); @endphp
                         @for($y = date('Y'); $y >= date('Y')-2; $y--)
-                        @php $opt = $y.'-'.($y+1); @endphp
-                        <option value="{{ $opt }}" {{ old('school_year', date('Y').'-'.(date('Y')+1)) === $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                            @php $opt = $y.'-'.($y+1); @endphp
+                            <option value="{{ $opt }}" {{ old('school_year', $defaultYear) === $opt ? 'selected' : '' }}>{{ $opt }}</option>
                         @endfor
                     </select>
                 </div>
@@ -193,11 +196,14 @@
         {{-- ── Submit ── --}}
         <div class="flex items-center gap-3 c-fade c-d4">
             <button type="submit"
-                    class="flex-1 sm:flex-none px-8 py-3.5 rounded-2xl font-bold text-white text-base transition-all hover:scale-[1.02] shadow-sm"
+                    :disabled="submitting"
+                    :class="submitting ? 'opacity-60 cursor-not-allowed' : 'hover:scale-[1.02]'"
+                    class="flex-1 sm:flex-none px-8 py-3.5 rounded-2xl font-bold text-white text-base transition-all shadow-sm"
                     style="background: linear-gradient(135deg, #4f46e5, #6366f1);"
-                    onmouseover="this.style.boxShadow='0 15px 35px rgba(79,70,229,0.25)'"
+                    onmouseover="if(!this.disabled) this.style.boxShadow='0 15px 35px rgba(79,70,229,0.25)'"
                     onmouseout="this.style.boxShadow=''">
-                ✅ Post Payment
+                <span x-show="!submitting">✅ Post Payment</span>
+                <span x-show="submitting">⏳ Processing...</span>
             </button>
             <a href="{{ route('cashier.students') }}"
                class="px-6 py-3.5 rounded-2xl font-semibold text-sm text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 transition-all">

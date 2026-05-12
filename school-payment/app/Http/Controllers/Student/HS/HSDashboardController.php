@@ -13,40 +13,74 @@ class HSDashboardController extends Controller
     {
         $student = Auth::user();
 
+        $isJHS = str_contains(strtolower($student->level_group ?? ''), 'junior');
+        $isSHS = str_contains(strtolower($student->level_group ?? ''), 'senior');
+
         // ── Current school year & semester ────────────────────────────────────
         $currentYear     = $this->currentSchoolYear();
-        $currentSemester = $request->get('semester', $this->currentSemester());
+        $currentSemester = $isSHS
+            ? $request->get('semester', $this->currentSemester())
+            : null; // JHS is annual — no semester filter
 
         // ── Fees ──────────────────────────────────────────────────────────────
-        $totalCharges = $student->fees()
+        $feesQuery = $student->fees()
             ->where('school_year', $currentYear)
-            ->where('semester', $currentSemester)
-            ->where('status', 'active')
-            ->sum('amount');
+            ->where('status', 'active');
+
+        if ($isSHS && $currentSemester) {
+            $feesQuery->where('semester', $currentSemester);
+        }
+
+        $totalCharges = $feesQuery->sum('amount');
 
         // ── Payments ──────────────────────────────────────────────────────────
-        $totalPaid = $student->payments()
+        $paymentsQuery = $student->payments()
             ->where('school_year', $currentYear)
-            ->where('semester', $currentSemester)
-            ->where('status', 'completed')
-            ->sum('amount');
+            ->where('status', 'completed');
 
-        // ── Previous semester carryover balance ───────────────────────────────
-        [$prevYear, $prevSemester] = $this->previousPeriod($currentYear, $currentSemester);
+        if ($isSHS && $currentSemester) {
+            $paymentsQuery->where('semester', $currentSemester);
+        }
 
-        $prevCharges = $student->fees()
-            ->where('school_year', $prevYear)
-            ->where('semester', $prevSemester)
-            ->where('status', 'active')
-            ->sum('amount');
+        $totalPaid = $paymentsQuery->sum('amount');
 
-        $prevPaid = $student->payments()
-            ->where('school_year', $prevYear)
-            ->where('semester', $prevSemester)
-            ->where('status', 'completed')
-            ->sum('amount');
+        // ── Previous balance carryover ────────────────────────────────────────
+        $previousBalance = 0;
 
-        $previousBalance = max(0, $prevCharges - $prevPaid);
+        if ($isSHS && $currentSemester) {
+            // SHS: compare previous semester
+            [$prevYear, $prevSemester] = $this->previousPeriod($currentYear, $currentSemester);
+
+            $prevCharges = $student->fees()
+                ->where('school_year', $prevYear)
+                ->where('semester', $prevSemester)
+                ->where('status', 'active')
+                ->sum('amount');
+
+            $prevPaid = $student->payments()
+                ->where('school_year', $prevYear)
+                ->where('semester', $prevSemester)
+                ->where('status', 'completed')
+                ->sum('amount');
+
+            $previousBalance = max(0, $prevCharges - $prevPaid);
+
+        } elseif ($isJHS) {
+            // JHS: compare previous school year (annual billing)
+            $prevYear = $this->previousSchoolYear($currentYear);
+
+            $prevCharges = $student->fees()
+                ->where('school_year', $prevYear)
+                ->where('status', 'active')
+                ->sum('amount');
+
+            $prevPaid = $student->payments()
+                ->where('school_year', $prevYear)
+                ->where('status', 'completed')
+                ->sum('amount');
+
+            $previousBalance = max(0, $prevCharges - $prevPaid);
+        }
 
         // ── Derived values ────────────────────────────────────────────────────
         $balance  = max(0, $totalCharges - $totalPaid) + $previousBalance;
@@ -70,23 +104,21 @@ class HSDashboardController extends Controller
             $recentPayments = collect();
         }
 
-        return view('students.college.dashboard', compact(
-            'balance',
-            'totalPaid',
-            'totalCharges',
-            'progress',
-            'recentPayments',
-            'currentYear',
-            'currentSemester',
-        ) + [
-            'paid'  => $totalPaid,
-            'total' => $totalCharges,
+        return view('students.hs.dashboard', [
+            'balance'         => $balance,
+            'paid'            => $totalPaid,
+            'total'           => $totalCharges,
+            'totalPaid'       => $totalPaid,
+            'totalCharges'    => $totalCharges,
+            'previousBalance' => $previousBalance,
+            'progress'        => $progress,
+            'recentPayments'  => $recentPayments,
+            'currentYear'     => $currentYear,
+            'currentSemester' => $currentSemester,
+            'semester'        => $currentSemester, // alias used by the blade
+            'isJHS'           => $isJHS,
+            'isSHS'           => $isSHS,
         ]);
-    }
-
-    public function paymentCreate()
-    {
-        return redirect()->route('student.billing');
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -95,7 +127,7 @@ class HSDashboardController extends Controller
     {
         $month = (int) date('n');
         $year  = (int) date('Y');
-        return ($month >= 6)
+        return ($month >= 8)
             ? $year . '-' . ($year + 1)
             : ($year - 1) . '-' . $year;
     }
@@ -113,11 +145,12 @@ class HSDashboardController extends Controller
             return [($start - 1) . '-' . ($end - 1), '2'];
         }
 
-        if ($semester === '2') {
-            return [$year, '1'];
-        }
+        return [$year, '1'];
+    }
 
-        // summer
-        return [$year, '2'];
+    private function previousSchoolYear(string $year): string
+    {
+        [$start, $end] = explode('-', $year);
+        return ($start - 1) . '-' . ($end - 1);
     }
 }

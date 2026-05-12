@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\OnlinePaymentSubmission;
 
 class TreasurerController extends Controller
 {
@@ -139,6 +140,11 @@ class TreasurerController extends Controller
                        ->orWhere('student_id', 'like', "%{$request->search}%")));
 
         $fees = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+
+        // Redirect to page 1 if requested page is out of range
+        if ($request->page > $fees->lastPage()) {
+            return redirect()->route('treasurer.fees', array_merge($request->except('page')));
+        }
 
         $schoolYears = Fee::distinct()->pluck('school_year')->sortDesc();
         $stats = [
@@ -347,6 +353,112 @@ class TreasurerController extends Controller
     {
         $payment->load(['student', 'cashier']);
         return view('treasurer.payments.show', compact('payment'));
+    }
+
+public function onlineSubmissions(Request $request)
+    {
+        $status = $request->get('status', 'pending');
+ 
+        $submissions = OnlinePaymentSubmission::with('student')
+            ->when($status !== 'all', fn($q) => $q->where('status', $status))
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+ 
+        $counts = [
+            'pending'  => OnlinePaymentSubmission::where('status', 'pending')->count(),
+            'verified' => OnlinePaymentSubmission::where('status', 'verified')->count(),
+            'rejected' => OnlinePaymentSubmission::where('status', 'rejected')->count(),
+        ];
+ 
+        return view('treasurer.online-submissions.index', compact('submissions', 'counts') + ['currentStatus' => $status]);
+    }
+ 
+    public function onlineSubmissionShow(OnlinePaymentSubmission $submission)
+    {
+        $submission->load('student', 'verifiedBy', 'payment');
+ 
+        $sy        = $submission->school_year;
+        $totalFees = Fee::where('student_id', $submission->student_id)->where('school_year', $sy)->where('status', 'active')->sum('amount');
+        $totalPaid = Payment::where('student_id', $submission->student_id)->where('school_year', $sy)->where('status', 'completed')->sum('amount');
+        $balance   = max(0, $totalFees - $totalPaid);
+ 
+        return view('treasurer.online-submissions.show', compact('submission', 'totalFees', 'totalPaid', 'balance'));
+    }
+ 
+    public function onlineSubmissionApprove(Request $request, OnlinePaymentSubmission $submission)
+    {
+        abort_unless($submission->isPending(), 422, 'Already processed.');
+ 
+        $validated = $request->validate([
+            'or_number' => 'nullable|string|max:50',
+            'notes'     => 'nullable|string|max:500',
+        ]);
+ 
+        $payment = Payment::create([
+            'student_id'       => $submission->student_id,
+            'cashier_id'       => Auth::id(),
+            'amount'           => $submission->amount,
+            'payment_date'     => now()->toDateString(),
+            'school_year'      => $submission->school_year,
+            'semester'         => $submission->semester,
+            'payment_method'   => $submission->payment_method,
+            'reference_number' => $submission->reference_number,
+            'or_number'        => $validated['or_number'] ?? null,
+            'notes'            => $validated['notes'] ?? $submission->notes,
+            'status'           => 'completed',
+        ]);
+ 
+        // Apply payment to fees
+        $remaining = $payment->amount;
+        $fees = Fee::where('student_id', $payment->student_id)
+            ->where('school_year', $payment->school_year)
+            ->where('status', 'active')->get();
+ 
+        foreach ($fees as $fee) {
+            if ($remaining <= 0) break;
+            $sf = \App\Models\StudentFee::firstOrCreate(
+                ['student_id' => $payment->student_id, 'fee_id' => $fee->id],
+                ['amount_paid' => 0, 'is_fully_paid' => false]
+            );
+            $owed    = $fee->amount - $sf->amount_paid;
+            $toApply = min($remaining, $owed);
+            if ($toApply > 0) {
+                $sf->amount_paid  += $toApply;
+                $sf->is_fully_paid = $sf->amount_paid >= $fee->amount;
+                $sf->save();
+                $remaining -= $toApply;
+            }
+        }
+ 
+        $submission->update([
+            'status'      => 'verified',
+            'verified_by' => Auth::id(),
+            'verified_at' => now(),
+            'payment_id'  => $payment->id,
+        ]);
+ 
+        return redirect()->route('treasurer.online-submissions')
+            ->with('success', "Payment of ₱" . number_format($submission->amount, 2) . " approved for {$submission->student->name}.");
+    }
+ 
+    public function onlineSubmissionReject(Request $request, OnlinePaymentSubmission $submission)
+    {
+        abort_unless($submission->isPending(), 422, 'Already processed.');
+ 
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+ 
+        $submission->update([
+            'status'           => 'rejected',
+            'verified_by'      => Auth::id(),
+            'verified_at'      => now(),
+            'rejection_reason' => $validated['rejection_reason'],
+        ]);
+ 
+        return redirect()->route('treasurer.online-submissions')
+            ->with('error', "Submission rejected for {$submission->student->name}.");
     }
 
     // ─────────────────────────────────────────────

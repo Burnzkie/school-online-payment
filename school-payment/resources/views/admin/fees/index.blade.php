@@ -3,98 +3,128 @@
 @section('title', 'Fee Management')
 
 @section('content')
+<div class="space-y-6">
 
-<div class="flex items-center justify-between a-fade">
-    <div>
-        <h2 class="text-xl font-bold text-gray-800">Fee Management</h2>
-        <p class="text-sm mt-0.5 text-gray-400">Configure and assign fee structures</p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 a-fade">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Fee Management</h1>
+            <p class="text-sm mt-1 text-gray-400">Assign and manage fees per student or level group</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+            <a href="{{ route('admin.fees.bulk-create') }}" class="a-btn-secondary">📋 Bulk Assign</a>
+            <a href="{{ route('admin.fees.create') }}" class="a-btn-primary">➕ Add Fee</a>
+        </div>
     </div>
-    <div class="flex gap-2">
-        <a href="{{ route('admin.fees.bulk-create') }}" class="a-btn-secondary">Bulk Assign</a>
-        <a href="{{ route('admin.fees.create') }}" class="a-btn-primary flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Add Fee
-        </a>
-    </div>
-</div>
 
-<div class="grid grid-cols-3 gap-4 a-fade a-d1">
-    <div class="a-card px-5 py-4">
-        <p class="text-2xl font-bold text-gray-800">{{ number_format($stats['total']) }}</p>
-        <p class="text-xs mt-1 font-semibold text-indigo-600">Active Fees</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 a-fade a-d1">
+        <div class="a-card px-5 py-4">
+            <p class="text-xs uppercase tracking-wider font-bold mb-2 text-gray-400">Total Assessed</p>
+            <p class="text-xl font-bold text-gray-800 font-mono-num">₱{{ number_format($stats['amount'], 0) }}</p>
+        </div>
+        <div class="a-card px-5 py-4">
+            <p class="text-xs uppercase tracking-wider font-bold mb-2 text-gray-400">Active Fees</p>
+            <p class="text-xl font-bold font-mono-num text-emerald-600">{{ $stats['total'] }}</p>
+        </div>
+        <div class="a-card px-5 py-4">
+            <p class="text-xs uppercase tracking-wider font-bold mb-2 text-gray-400">Waived</p>
+            <p class="text-xl font-bold font-mono-num text-amber-600">{{ $stats['waived'] }}</p>
+        </div>
+        <div class="a-card px-5 py-4">
+            <p class="text-xs uppercase tracking-wider font-bold mb-2 text-gray-400">Cancelled</p>
+            <p class="text-xl font-bold font-mono-num text-red-500">{{ $stats['cancelled'] ?? 0 }}</p>
+        </div>
     </div>
-    <div class="a-card px-5 py-4">
-        <p class="text-2xl font-bold text-gray-800">₱{{ number_format($stats['amount'],2) }}</p>
-        <p class="text-xs mt-1 font-semibold text-emerald-600">Total Assessed</p>
-    </div>
-    <div class="a-card px-5 py-4">
-        <p class="text-2xl font-bold text-gray-800">{{ number_format($stats['waived']) }}</p>
-        <p class="text-xs mt-1 font-semibold text-amber-500">Waived</p>
-    </div>
-</div>
 
-<form class="a-card p-4 flex flex-wrap gap-3 a-fade a-d2" method="GET">
-    <input name="q" value="{{ request('q') }}" placeholder="Search fee name…" class="a-input flex-1 min-w-44">
-    <select name="school_year" class="a-input a-select w-36">
-        <option value="">All Years</option>
-        @foreach($schoolYears as $y)<option value="{{ $y }}" {{ request('school_year')===$y?'selected':'' }}>{{ $y }}</option>@endforeach
-    </select>
-    <select name="semester" class="a-input a-select w-36">
-        <option value="">All Semesters</option>
-        @foreach(['1'=>'1st Sem','2'=>'2nd Sem','summer'=>'Summer'] as $v=>$l)
-        <option value="{{ $v }}" {{ request('semester')===$v?'selected':'' }}>{{ $l }}</option>
-        @endforeach
-    </select>
-    <select name="level_group" class="a-input a-select w-40">
-        <option value="">All Levels</option>
-        @foreach($levelGroups as $lg)<option value="{{ $lg }}" {{ request('level_group')===$lg?'selected':'' }}>{{ $lg }}</option>@endforeach
-    </select>
-    <select name="status" class="a-input a-select w-32">
-        <option value="">All Status</option>
-        @foreach(['active','waived','cancelled'] as $s)
-        <option value="{{ $s }}" {{ request('status')===$s?'selected':'' }}>{{ ucfirst($s) }}</option>
-        @endforeach
-    </select>
-    <button type="submit" class="a-btn-primary px-5">Filter</button>
-    <a href="{{ route('admin.fees') }}" class="a-btn-secondary">Reset</a>
-</form>
-
-<div class="a-card a-fade a-d3">
-    <div class="overflow-x-auto">
-        <table class="a-table">
-            <thead>
-                <tr><th>Student</th><th>Fee Name</th><th>Amount</th><th>Period</th><th>Status</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-                @forelse($fees as $fee)
-                <tr>
-                    <td>
-                        <p class="font-semibold text-gray-800 text-sm">{{ $fee->student->name ?? '—' }}</p>
-                        <p class="text-xs font-mono-num text-gray-400">{{ $fee->student->student_id ?? '' }}</p>
-                    </td>
-                    <td>
-                        <p class="font-semibold text-gray-800">{{ $fee->fee_name }}</p>
-                        @if($fee->description)<p class="text-xs text-gray-400">{{ $fee->description }}</p>@endif
-                    </td>
-                    <td class="font-bold font-mono-num text-indigo-600">₱{{ number_format($fee->amount,2) }}</td>
-                    <td class="text-xs text-gray-400">{{ $fee->school_year }} · Sem {{ $fee->semester }}</td>
-                    <td><span class="a-badge {{ $fee->status==='active'?'a-badge-emerald':($fee->status==='waived'?'a-badge-sky':'a-badge-gray') }}">{{ ucfirst($fee->status) }}</span></td>
-                    <td>
-                        <div class="flex gap-2">
-                            <a href="{{ route('admin.fees.edit', $fee) }}" class="a-btn-secondary text-xs py-1.5 px-3">Edit</a>
-                            <form method="POST" action="{{ route('admin.fees.destroy', $fee) }}" onsubmit="return confirm('Delete this fee?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="a-btn-danger text-xs py-1.5 px-3">Delete</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr><td colspan="6" class="text-center py-12 text-gray-400">No fees found.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="a-card p-4 a-fade a-d2">
+        <form method="GET" class="flex flex-wrap gap-3 items-end">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Search student or fee name…" class="a-input flex-1 min-w-[180px]">
+            <select name="school_year" class="a-input a-select w-auto">
+                <option value="">All Years</option>
+                @foreach($schoolYears as $sy)
+                    <option value="{{ $sy }}" {{ request('school_year')===$sy ? 'selected' : '' }}>{{ $sy }}</option>
+                @endforeach
+            </select>
+            <select name="semester" class="a-input a-select w-auto">
+                <option value="">All Semesters</option>
+                <option value="1"      {{ request('semester')==='1'      ? 'selected' : '' }}>1st Semester</option>
+                <option value="2"      {{ request('semester')==='2'      ? 'selected' : '' }}>2nd Semester</option>
+                <option value="summer" {{ request('semester')==='summer' ? 'selected' : '' }}>Summer</option>
+            </select>
+      
+            <select name="status" class="a-input a-select w-auto">
+                <option value="">All Status</option>
+                <option value="active"    {{ request('status')==='active'    ? 'selected' : '' }}>Active</option>
+                <option value="waived"    {{ request('status')==='waived'    ? 'selected' : '' }}>Waived</option>
+                <option value="cancelled" {{ request('status')==='cancelled' ? 'selected' : '' }}>Cancelled</option>
+            </select>
+            <button type="submit" class="a-btn-primary">🔍 Filter</button>
+            <a href="{{ route('admin.fees') }}" class="a-btn-secondary">Clear</a>
+        </form>
     </div>
-    <div class="px-6 py-4">{{ $fees->withQueryString()->links() }}</div>
+
+    <div class="a-card a-fade a-d3">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-gray-100 bg-gray-50">
+                        <th class="text-left px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Student</th>
+                        <th class="text-left px-4 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Fee</th>
+                        <th class="text-left px-4 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Period</th>
+                        <th class="text-right px-4 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Amount</th>
+                        <th class="text-center px-4 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Status</th>
+                        <th class="text-center px-4 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($fees as $fee)
+                    <tr class="border-b border-gray-50 hover:bg-gray-50 transition">
+                        <td class="px-5 py-3.5">
+                            <p class="font-semibold text-gray-800">{{ $fee->student->name ?? '—' }}</p>
+                            <p class="text-xs text-gray-400">{{ $fee->student->student_id ?? '' }} · {{ $fee->student->level_group ?? '' }}</p>
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <p class="font-semibold text-gray-800">{{ $fee->fee_name }}</p>
+                            @if($fee->description)
+                                <p class="text-xs truncate max-w-[200px] text-gray-400">{{ $fee->description }}</p>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <p class="text-gray-700 font-semibold">{{ $fee->school_year }}</p>
+                            <p class="text-xs text-gray-400">{{ match($fee->semester) { '1' => '1st Semester', '2' => '2nd Semester', 'summer' => 'Summer', default => $fee->semester } }}</p>
+                        </td>
+                        <td class="px-4 py-3.5 text-right font-bold font-mono-num text-indigo-600">₱{{ number_format($fee->amount, 2) }}</td>
+                        <td class="px-4 py-3.5 text-center">
+                            @if($fee->status === 'active')
+                                <span class="a-badge a-badge-emerald">Active</span>
+                            @elseif($fee->status === 'waived')
+                                <span class="a-badge a-badge-sky">Waived</span>
+                            @else
+                                <span class="a-badge a-badge-gray">Cancelled</span>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="{{ route('admin.fees.edit', $fee) }}" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-500 border border-indigo-100 hover:bg-indigo-100 transition">Edit</a>
+                                <form method="POST" action="{{ route('admin.fees.destroy', $fee) }}" onsubmit="return confirm('Delete this fee?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="a-btn-danger text-xs px-3 py-1.5">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="px-5 py-10 text-center text-sm text-gray-400">
+                            No fees found. <a href="{{ route('admin.fees.create') }}" class="underline text-indigo-500">Add one →</a>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if($fees->hasPages())
+        <div class="px-5 py-4 border-t border-gray-100 bg-gray-50">{{ $fees->withQueryString()->links() }}</div>
+        @endif
+    </div>
 </div>
 @endsection

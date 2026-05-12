@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Parent\ParentController;
 
 use App\Http\Controllers\UserSettingsController;
+use App\Http\Middleware\EnsureHighSchoolStudent;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,13 +120,9 @@ Route::get('/dashboard', function () {
     }
 
     if ($user->role === 'student') {
-        $levelGroup = strtolower($user->level_group ?? '');
-
-        if (str_contains($levelGroup, 'junior') || str_contains($levelGroup, 'senior')) {
-            return redirect()->route('hs.dashboard');
-        }
-
-        return redirect()->route('student.dashboard');
+        return EnsureHighSchoolStudent::isHighSchoolStudent($user)
+            ? redirect()->route('hs.dashboard')
+            : redirect()->route('student.dashboard');
     }
 
     // Fallback for any unrecognized role
@@ -172,6 +169,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
     Route::post('/fees',                             [AdminController::class, 'feeStore'])->name('fees.store');
     Route::get('/fees/bulk-create',                  [AdminController::class, 'feeBulkCreate'])->name('fees.bulk-create');
     Route::post('/fees/bulk',                        [AdminController::class, 'feeBulkStore'])->name('fees.bulk-store');
+    Route::get('/fees/batch-count',                  [AdminController::class, 'feeBatchCount'])->name('fees.batch-count');
     Route::get('/fees/{fee}/edit',                   [AdminController::class, 'feeEdit'])->name('fees.edit');
     Route::patch('/fees/{fee}',                      [AdminController::class, 'feeUpdate'])->name('fees.update');
     Route::delete('/fees/{fee}',                     [AdminController::class, 'feeDestroy'])->name('fees.destroy');
@@ -180,6 +178,12 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
     Route::get('/payments',                          [AdminController::class, 'payments'])->name('payments');
     Route::get('/payments/{payment}',                [AdminController::class, 'paymentShow'])->name('payments.show');
     Route::patch('/payments/{payment}/void',         [AdminController::class, 'paymentVoid'])->name('payments.void');
+
+    // ── Online Payment Submissions ──────────────────────────────────────────
+    Route::get('/online-submissions',                          [AdminController::class, 'onlineSubmissions'])->name('online-submissions');
+    Route::get('/online-submissions/{submission}',             [AdminController::class, 'onlineSubmissionShow'])->name('online-submissions.show');
+    Route::patch('/online-submissions/{submission}/approve',   [AdminController::class, 'onlineSubmissionApprove'])->name('online-submissions.approve');
+    Route::patch('/online-submissions/{submission}/reject',    [AdminController::class, 'onlineSubmissionReject'])->name('online-submissions.reject');
 
     // ── Scholarships ───────────────────────────────────────────────────────
     Route::get('/scholarships',                      [AdminController::class, 'scholarships'])->name('scholarships');
@@ -218,7 +222,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureAdmin::class])
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureStudentIsActive::class])->prefix('student')->name('student.')->group(function () {
+Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureCollegeStudent::class, \App\Http\Middleware\EnsureStudentIsActive::class])->prefix('student')->name('student.')->group(function () {
 
     Route::get('/dashboard', [StudentDashboardController::class, 'index'])
          ->name('dashboard');
@@ -384,6 +388,12 @@ Route::middleware(['auth', \App\Http\Middleware\EnsureTreasurer::class])
     // Payments (read-only view)
     Route::get('/payments',             [TreasurerController::class, 'payments'])->name('payments');
     Route::get('/payments/{payment}',   [TreasurerController::class, 'paymentShow'])->name('payments.show');
+
+    // Online Payment Submissions
+    Route::get('/online-submissions',                          [TreasurerController::class, 'onlineSubmissions'])->name('online-submissions');
+    Route::get('/online-submissions/{submission}',             [TreasurerController::class, 'onlineSubmissionShow'])->name('online-submissions.show');
+    Route::patch('/online-submissions/{submission}/approve',   [TreasurerController::class, 'onlineSubmissionApprove'])->name('online-submissions.approve');
+    Route::patch('/online-submissions/{submission}/reject',    [TreasurerController::class, 'onlineSubmissionReject'])->name('online-submissions.reject');
 
     // Students Overview
     Route::get('/students',                                    [TreasurerController::class, 'students'])->name('students');

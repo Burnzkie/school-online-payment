@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\Fee;
 use App\Models\StudentFee;
 use App\Models\InstallmentPlan;
+use App\Models\OnlinePaymentSubmission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -27,6 +28,7 @@ class CashierController extends Controller
             ['route' => 'cashier.dashboard',       'label' => 'Dashboard',    'icon' => '🏠', 'desc' => 'Overview & stats'],
             ['route' => 'cashier.students',         'label' => 'Students',     'icon' => '👥', 'desc' => 'Lookup & ledgers'],
             ['route' => 'cashier.receive-payment',  'label' => 'Receive Pay',  'icon' => '💵', 'desc' => 'Post a payment'],
+            ['route' => 'cashier.online-payments',  'label' => 'Online Pay',   'icon' => '📱', 'desc' => 'GCash/Maya approvals'],
             ['route' => 'cashier.transactions',     'label' => 'Transactions', 'icon' => '🧾', 'desc' => 'Payment history'],
         ];
     }
@@ -48,7 +50,7 @@ class CashierController extends Controller
 
         $totalStudents = User::where('role', 'student')->count();
 
-        $sy = date('Y') . '-' . (date('Y') + 1);
+        $sy = date('n') >= 6 ? date('Y').'-'.(date('Y')+1) : (date('Y')-1).'-'.date('Y');
 
         $studentsWithBalance = User::where('role', 'student')
             ->whereHas('fees', function ($q) use ($sy) {
@@ -97,7 +99,7 @@ class CashierController extends Controller
             $query->where('level_group', $request->level_group);
         }
 
-        $sy = date('Y') . '-' . (date('Y') + 1);
+        $sy = date('n') >= 6 ? date('Y').'-'.(date('Y')+1) : (date('Y')-1).'-'.date('Y');
 
         if ($request->balance_filter === 'with_balance') {
             $query->whereHas('fees', fn($q) => $q->where('school_year', $sy)->where('status', 'active'));
@@ -116,7 +118,7 @@ class CashierController extends Controller
     public function searchStudents(Request $request)
     {
         $q  = $request->get('q', '');
-        $sy = date('Y') . '-' . (date('Y') + 1);
+        $sy = date('n') >= 6 ? date('Y').'-'.(date('Y')+1) : (date('Y')-1).'-'.date('Y');
 
         $students = User::where('role', 'student')
             ->where(function ($builder) use ($q) {
@@ -200,7 +202,7 @@ class CashierController extends Controller
         if ($request->filled('student_id')) {
             $student = User::find($request->student_id);
             if ($student && $student->role === 'student') {
-                $sy = date('Y') . '-' . (date('Y') + 1);
+                $sy = date('n') >= 6 ? date('Y').'-'.(date('Y')+1) : (date('Y')-1).'-'.date('Y');
                 $totalFees        = Fee::where('student_id', $student->id)->where('school_year', $sy)->where('status', 'active')->sum('amount');
                 $totalPaid        = Payment::where('student_id', $student->id)->where('school_year', $sy)->where('status', 'completed')->sum('amount');
                 $student->balance = max(0, $totalFees - $totalPaid);
@@ -232,6 +234,21 @@ class CashierController extends Controller
 
         $student = User::find($validated['student_id']);
         abort_unless($student && $student->role === 'student', 422, 'Invalid student.');
+
+        // Guard: reject duplicate submissions within a 15-second window
+        $isDuplicate = Payment::where('student_id', $validated['student_id'])
+            ->where('amount',         $validated['amount'])
+            ->where('payment_method', $validated['payment_method'])
+            ->where('payment_date',   $validated['payment_date'])
+            ->where('school_year',    $validated['school_year'])
+            ->where('semester',       $validated['semester'])
+            ->where('created_at', '>=', now()->subSeconds(15))
+            ->exists();
+
+        if ($isDuplicate) {
+            return back()->withInput()
+                ->with('error', 'Duplicate payment detected. This payment was already recorded moments ago.');
+        }
 
         $payment = Payment::create([
             'student_id'       => $validated['student_id'],
@@ -348,6 +365,118 @@ class CashierController extends Controller
         $this->applyPaymentToFees($payment);
 
         return back()->with('success', 'Payment marked as completed.');
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // ONLINE PAYMENT SUBMISSIONS
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * List online payment submissions.
+     */
+    public function onlinePayments(Request $request)
+    {
+        $status = $request->get('status', 'pending');
+
+        $submissions = OnlinePaymentSubmission::with('student')
+            ->when($status !== 'all', fn($q) => $q->where('status', $status))
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        $counts = [
+            'pending'  => OnlinePaymentSubmission::where('status', 'pending')->count(),
+            'verified' => OnlinePaymentSubmission::where('status', 'verified')->count(),
+            'rejected' => OnlinePaymentSubmission::where('status', 'rejected')->count(),
+        ];
+
+        return view('cashier.online-payments.index', array_merge([
+            'submissions'   => $submissions,
+            'counts'        => $counts,
+            'currentStatus' => $status,
+        ], ['nav' => $this->nav()]));
+    }
+
+    /**
+     * Show a single online payment submission with proof image.
+     */
+    public function onlinePaymentShow(OnlinePaymentSubmission $submission)
+    {
+        $submission->load('student', 'verifiedBy', 'payment');
+
+        $sy        = $submission->school_year;
+        $totalFees = Fee::where('student_id', $submission->student_id)->where('school_year', $sy)->where('status', 'active')->sum('amount');
+        $totalPaid = Payment::where('student_id', $submission->student_id)->where('school_year', $sy)->where('status', 'completed')->sum('amount');
+        $balance   = max(0, $totalFees - $totalPaid);
+
+        return view('cashier.online-payments.show', array_merge([
+            'submission' => $submission,
+            'totalFees'  => $totalFees,
+            'totalPaid'  => $totalPaid,
+            'balance'    => $balance,
+        ], ['nav' => $this->nav()]));
+    }
+
+    /**
+     * Approve an online payment submission → creates a completed Payment record.
+     */
+    public function onlinePaymentVerify(Request $request, OnlinePaymentSubmission $submission)
+    {
+        abort_unless($submission->isPending(), 422, 'This submission has already been processed.');
+
+        $validated = $request->validate([
+            'or_number' => 'nullable|string|max:50',
+            'notes'     => 'nullable|string|max:500',
+        ]);
+
+        $payment = Payment::create([
+            'student_id'       => $submission->student_id,
+            'cashier_id'       => Auth::id(),
+            'amount'           => $submission->amount,
+            'payment_date'     => now()->toDateString(),
+            'school_year'      => $submission->school_year,
+            'semester'         => $submission->semester,
+            'payment_method'   => $submission->payment_method,
+            'reference_number' => $submission->reference_number,
+            'or_number'        => $validated['or_number'] ?? null,
+            'notes'            => $validated['notes'] ?? $submission->notes,
+            'status'           => 'completed',
+        ]);
+
+        $this->applyPaymentToFees($payment);
+
+        $submission->update([
+            'status'      => 'verified',
+            'verified_by' => Auth::id(),
+            'verified_at' => now(),
+            'payment_id'  => $payment->id,
+        ]);
+
+        return redirect()->route('cashier.online-payments')
+            ->with('success', "Payment of ₱" . number_format($submission->amount, 2) . " approved and posted for {$submission->student->name}.");
+    }
+
+    /**
+     * Reject an online payment submission.
+     */
+    public function onlinePaymentReject(Request $request, OnlinePaymentSubmission $submission)
+    {
+        abort_unless($submission->isPending(), 422, 'This submission has already been processed.');
+
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        $submission->update([
+            'status'           => 'rejected',
+            'verified_by'      => Auth::id(),
+            'verified_at'      => now(),
+            'rejection_reason' => $validated['rejection_reason'],
+        ]);
+
+        return redirect()->route('cashier.online-payments')
+            ->with('error', "Submission rejected for {$submission->student->name}.");
     }
 
     // ═══════════════════════════════════════════════════════════════

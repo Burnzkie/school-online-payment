@@ -91,15 +91,7 @@
             </p>
         </div>
         <div class="flex items-center gap-3 no-print">
-            @if(!isset($activePlan) && ($balance ?? 0) > 0)
-            <a href="{{ route('hs.installments') }}"
-               class="hb-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                Installment Plan
-            </a>
-            @endif
+           
             <button onclick="window.print()"
                     class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-colors"
                     style="background: #ffffff; border: 1px solid #e5e7eb; color: #6b7280;">

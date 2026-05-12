@@ -225,7 +225,6 @@
                             💵
                         </div>
                         <div class="hidden sm:block">
-                            <p class="font-display text-gray-800 text-base leading-none tracking-wide">PAC Cashier</p>
                             <p class="text-[10px] font-semibold mt-0.5 text-indigo-500">Payment Management</p>
                         </div>
                     </div>

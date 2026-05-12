@@ -59,7 +59,6 @@
             <a href="{{ route('treasurer.fees') }}" class="btn-secondary">Clear</a>
         </form>
     </div>
-
     <div class="section-card fade-up fade-up-d3">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">

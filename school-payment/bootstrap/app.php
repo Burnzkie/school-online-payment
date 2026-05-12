@@ -15,6 +15,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust all proxies (required for Render/Cloudflare HTTPS to work correctly)
         $middleware->trustProxies(at: '*');
         $middleware->trustHosts(at: ['school-online-payment-1.onrender.com']);
+
+        // ── Custom middleware aliases ──────────────────────────────────────
+        $middleware->alias([
+            'ensure.hs'        => \App\Http\Middleware\EnsureHighSchoolStudent::class,
+            'ensure.college'   => \App\Http\Middleware\EnsureCollegeStudent::class,
+            'ensure.admin'     => \App\Http\Middleware\EnsureAdmin::class,
+            'ensure.cashier'   => \App\Http\Middleware\EnsureCashier::class,
+            'ensure.treasurer' => \App\Http\Middleware\EnsureTreasurer::class,
+            'ensure.parent'    => \App\Http\Middleware\EnsureParent::class,
+            'ensure.active'    => \App\Http\Middleware\EnsureStudentIsActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

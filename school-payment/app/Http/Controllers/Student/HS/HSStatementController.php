@@ -17,11 +17,16 @@ class HSStatementController extends Controller
         $isJHS = str_contains(strtolower($user->level_group ?? ''), 'junior');
         $isSHS = str_contains(strtolower($user->level_group ?? ''), 'senior');
 
-        $availableYears = Payment::where('student_id', $user->id)
-            ->distinct('school_year')
-            ->orderByDesc('school_year')
-            ->pluck('school_year')
-            ->toArray();
+        // Include years from both fees and payments so students
+        // always see their school years even with no payments yet
+        $yearsFromPayments = Payment::where('student_id', $user->id)
+            ->distinct()->pluck('school_year');
+
+        $yearsFromFees = Fee::where('student_id', $user->id)
+            ->distinct()->pluck('school_year');
+
+        $availableYears = $yearsFromPayments->merge($yearsFromFees)
+            ->unique()->sortDesc()->values()->toArray();
 
         if (empty($availableYears)) {
             $availableYears = [$this->currentSchoolYear()];
@@ -32,6 +37,7 @@ class HSStatementController extends Controller
 
         $query = Payment::where('student_id', $user->id)
             ->where('school_year', $selectedYear)
+            ->whereIn('status', ['completed', 'pending'])
             ->orderByDesc('payment_date');
 
         if ($isSHS && $selectedSemester && $selectedSemester !== 'all') {
@@ -50,6 +56,6 @@ class HSStatementController extends Controller
     {
         $month = (int) date('n');
         $year  = (int) date('Y');
-        return ($month >= 6) ? $year . '-' . ($year + 1) : ($year - 1) . '-' . $year;
+        return ($month >= 8) ? $year . '-' . ($year + 1) : ($year - 1) . '-' . $year;
     }
 }

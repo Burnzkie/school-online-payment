@@ -8,7 +8,6 @@ use App\Models\Fee;
 use App\Models\Payment;
 use App\Models\Scholarship;
 use App\Models\StudentClearance;
-use App\Models\StudentFee;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -17,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Models\OnlinePaymentSubmission;
 
 class AdminController extends Controller
 {
@@ -426,9 +426,10 @@ class AdminController extends Controller
         $levelGroups = User::where('role', 'student')->distinct()->pluck('level_group')->filter()->sort()->values();
 
         $stats = [
-            'total'   => Fee::where('school_year', $currentYear)->where('status', 'active')->count(),
-            'amount'  => Fee::where('school_year', $currentYear)->where('status', 'active')->sum('amount'),
-            'waived'  => Fee::where('school_year', $currentYear)->where('status', 'waived')->count(),
+            'total'     => Fee::where('school_year', $currentYear)->where('status', 'active')->count(),
+            'amount'    => Fee::where('school_year', $currentYear)->where('status', 'active')->sum('amount'),
+            'waived'    => Fee::where('school_year', $currentYear)->where('status', 'waived')->count(),
+            'cancelled' => Fee::where('school_year', $currentYear)->where('status', 'cancelled')->count(),
         ];
 
         return view('admin.fees.index', array_merge([
@@ -481,37 +482,65 @@ class AdminController extends Controller
             'school_year' => ['required', 'string', 'regex:/^\d{4}-\d{4}$/'],
             'semester'    => 'required|in:1,2,summer',
             'level_group' => 'required|string',
+            'year_level'  => 'nullable|string|max:100',
+            'strand'      => 'nullable|string|max:100',
+            'department'  => 'nullable|string|max:100',
+            'program'     => 'nullable|string|max:255',
             'description' => 'nullable|string|max:500',
+            'status'      => 'nullable|in:active,waived,cancelled',
+            'skip_existing' => 'nullable|boolean',
         ]);
+
+        $skipExisting = $request->boolean('skip_existing', true);
 
         $students = User::where('role', 'student')
             ->when($validated['level_group'] !== 'all', fn($q) => $q->where('level_group', $validated['level_group']))
+            ->when(!empty($validated['year_level']),  fn($q) => $q->where('year_level',  $validated['year_level']))
+            ->when(!empty($validated['strand']),      fn($q) => $q->where('strand',      $validated['strand']))
+            ->when(!empty($validated['department']),  fn($q) => $q->where('department',  $validated['department']))
+            ->when(!empty($validated['program']),     fn($q) => $q->where('program',     $validated['program']))
             ->pluck('id');
 
         $count = 0;
         foreach ($students as $studentId) {
-            $exists = Fee::where('student_id', $studentId)
-                ->where('fee_name', $validated['fee_name'])
-                ->where('school_year', $validated['school_year'])
-                ->where('semester', $validated['semester'])
-                ->exists();
+            if ($skipExisting) {
+                $exists = Fee::where('student_id', $studentId)
+                    ->where('fee_name', $validated['fee_name'])
+                    ->where('school_year', $validated['school_year'])
+                    ->where('semester', $validated['semester'])
+                    ->exists();
 
-            if (!$exists) {
-                Fee::create([
-                    'student_id'  => $studentId,
-                    'fee_name'    => $validated['fee_name'],
-                    'amount'      => $validated['amount'],
-                    'school_year' => $validated['school_year'],
-                    'semester'    => $validated['semester'],
-                    'description' => $validated['description'] ?? null,
-                    'status'      => 'active',
-                ]);
-                $count++;
+                if ($exists) continue;
             }
+
+            Fee::create([
+                'student_id'  => $studentId,
+                'fee_name'    => $validated['fee_name'],
+                'amount'      => $validated['amount'],
+                'school_year' => $validated['school_year'],
+                'semester'    => $validated['semester'],
+                'description' => $validated['description'] ?? null,
+                'status'      => $validated['status'] ?? 'active',
+            ]);
+            $count++;
         }
 
         return redirect()->route('admin.fees')
             ->with('success', "Bulk fee \"{$validated['fee_name']}\" applied to {$count} students.");
+    }
+
+    public function feeBatchCount(Request $request)
+    {
+        $count = User::where('role', 'student')
+            ->when($request->level_group && $request->level_group !== 'all',
+                fn($q) => $q->where('level_group', $request->level_group))
+            ->when($request->year_level,  fn($q) => $q->where('year_level',  $request->year_level))
+            ->when($request->strand,      fn($q) => $q->where('strand',      $request->strand))
+            ->when($request->department,  fn($q) => $q->where('department',  $request->department))
+            ->when($request->program,     fn($q) => $q->where('program',     $request->program))
+            ->count();
+
+        return response()->json(['count' => $count]);
     }
 
     public function feeEdit(Fee $fee)
@@ -593,6 +622,113 @@ class AdminController extends Controller
         return back()->with('success', "Payment OR#{$payment->or_number} voided.");
     }
 
+
+      public function onlineSubmissions(Request $request)
+    {
+        $status = $request->get('status', 'pending');
+ 
+        $submissions = OnlinePaymentSubmission::with('student')
+            ->when($status !== 'all', fn($q) => $q->where('status', $status))
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+ 
+        $counts = [
+            'pending'  => OnlinePaymentSubmission::where('status', 'pending')->count(),
+            'verified' => OnlinePaymentSubmission::where('status', 'verified')->count(),
+            'rejected' => OnlinePaymentSubmission::where('status', 'rejected')->count(),
+        ];
+ 
+        return view('admin.online-submissions.index', compact('submissions', 'counts') + ['currentStatus' => $status]);
+    }
+ 
+    public function onlineSubmissionShow(OnlinePaymentSubmission $submission)
+    {
+        $submission->load('student', 'verifiedBy', 'payment');
+ 
+        $sy        = $submission->school_year;
+        $totalFees = Fee::where('student_id', $submission->student_id)->where('school_year', $sy)->where('status', 'active')->sum('amount');
+        $totalPaid = Payment::where('student_id', $submission->student_id)->where('school_year', $sy)->where('status', 'completed')->sum('amount');
+        $balance   = max(0, $totalFees - $totalPaid);
+ 
+        return view('admin.online-submissions.show', compact('submission', 'totalFees', 'totalPaid', 'balance'));
+    }
+ 
+    public function onlineSubmissionApprove(Request $request, OnlinePaymentSubmission $submission)
+    {
+        abort_unless($submission->isPending(), 422, 'Already processed.');
+ 
+        $validated = $request->validate([
+            'or_number' => 'nullable|string|max:50',
+            'notes'     => 'nullable|string|max:500',
+        ]);
+ 
+        $payment = Payment::create([
+            'student_id'       => $submission->student_id,
+            'cashier_id'       => Auth::id(),
+            'amount'           => $submission->amount,
+            'payment_date'     => now()->toDateString(),
+            'school_year'      => $submission->school_year,
+            'semester'         => $submission->semester,
+            'payment_method'   => $submission->payment_method,
+            'reference_number' => $submission->reference_number,
+            'or_number'        => $validated['or_number'] ?? null,
+            'notes'            => $validated['notes'] ?? $submission->notes,
+            'status'           => 'completed',
+        ]);
+ 
+        // Apply payment to fees (oldest first)
+        $remaining = $payment->amount;
+        $fees = Fee::where('student_id', $payment->student_id)
+            ->where('school_year', $payment->school_year)
+            ->where('status', 'active')->get();
+ 
+        foreach ($fees as $fee) {
+            if ($remaining <= 0) break;
+            $sf = \App\Models\StudentFee::firstOrCreate(
+                ['student_id' => $payment->student_id, 'fee_id' => $fee->id],
+                ['amount_paid' => 0, 'is_fully_paid' => false]
+            );
+            $owed    = $fee->amount - $sf->amount_paid;
+            $toApply = min($remaining, $owed);
+            if ($toApply > 0) {
+                $sf->amount_paid  += $toApply;
+                $sf->is_fully_paid = $sf->amount_paid >= $fee->amount;
+                $sf->save();
+                $remaining -= $toApply;
+            }
+        }
+ 
+        $submission->update([
+            'status'      => 'verified',
+            'verified_by' => Auth::id(),
+            'verified_at' => now(),
+            'payment_id'  => $payment->id,
+        ]);
+ 
+        return redirect()->route('admin.online-submissions')
+            ->with('success', "Payment of ₱" . number_format($submission->amount, 2) . " approved for {$submission->student->name}.");
+    }
+ 
+    public function onlineSubmissionReject(Request $request, OnlinePaymentSubmission $submission)
+    {
+        abort_unless($submission->isPending(), 422, 'Already processed.');
+ 
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+ 
+        $submission->update([
+            'status'           => 'rejected',
+            'verified_by'      => Auth::id(),
+            'verified_at'      => now(),
+            'rejection_reason' => $validated['rejection_reason'],
+        ]);
+ 
+        return redirect()->route('admin.online-submissions')
+            ->with('error', "Submission rejected for {$submission->student->name}.");
+    }
+    
     // =========================================================================
     // SCHOLARSHIPS
     // =========================================================================

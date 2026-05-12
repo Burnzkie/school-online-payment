@@ -52,7 +52,7 @@
                         <option value="">— Select Level Group —</option>
                         <option value="Kinder"       {{ old('level_group')=='Kinder'       ? 'selected':'' }}>Kinder</option>
                         <option value="Elementary"   {{ old('level_group')=='Elementary'   ? 'selected':'' }}>Elementary</option>
-                        <option value="Junior High"  {{ old('level_group')=='Junior High'  ? 'selected':'' }}>Junior High School</option>
+                        <option value="Junior High School"  {{ old('level_group')=='Junior High School'  ? 'selected':'' }}>Junior High School</option>
                         <option value="Senior High"  {{ old('level_group')=='Senior High'  ? 'selected':'' }}>Senior High School</option>
                         <option value="College"      {{ old('level_group')=='College'      ? 'selected':'' }}>College</option>
                     </select>
@@ -154,7 +154,7 @@
 const yearLevelMap = {
     'Kinder':      ['Nursery', 'Kinder 1', 'Kinder 2'],
     'Elementary':  ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6'],
-    'Junior High': ['Grade 7','Grade 8','Grade 9','Grade 10'],
+    'Junior High School': ['Grade 7','Grade 8','Grade 9','Grade 10'],
     'Senior High': ['Grade 11','Grade 12'],
     'College':     ['1st Year','2nd Year','3rd Year','4th Year','5th Year'],
 };

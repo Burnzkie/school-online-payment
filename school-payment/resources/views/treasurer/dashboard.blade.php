@@ -74,44 +74,9 @@
             <span class="text-3xl font-bold font-mono-num text-amber-600">{{ $pendingPayments }}</span>
             <span class="text-xs text-gray-400">Awaiting confirmation</span>
         </div>
-        <div class="stat-card flex flex-col gap-1">
-            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Overdue Plans</span>
-            <span class="text-3xl font-bold font-mono-num" style="color: {{ $overdueCount > 0 ? '#e11d48' : '#16a34a' }}">{{ $overdueCount }}</span>
-            <span class="text-xs text-gray-400">Installment schedules</span>
-        </div>
+        
     </div>
 
-    {{-- Aging + Student Status --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 fade-up fade-up-d2">
-
-        {{-- Aging Buckets --}}
-        <div class="section-card p-5">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-sm font-bold text-gray-800">Receivables Aging</h3>
-                <a href="{{ route('treasurer.aging') }}" class="text-xs font-semibold text-indigo-500 hover:text-indigo-700">Full Report →</a>
-            </div>
-            @php
-                $agingColors = ['1-30'=>'#d97706','31-60'=>'#ea580c','61-90'=>'#dc2626','90+'=>'#e11d48'];
-                $agingLabels = ['1-30'=>'1–30 days','31-60'=>'31–60 days','61-90'=>'61–90 days','90+'=>'Over 90 days'];
-                $agingMax = max(max(array_values($aging)), 1);
-            @endphp
-            <div class="space-y-3">
-                @foreach($aging as $bucket => $amount)
-                <div>
-                    <div class="flex justify-between text-xs mb-1">
-                        <span class="text-gray-500">{{ $agingLabels[$bucket] }}</span>
-                        <span class="font-bold font-mono-num" style="color: {{ $agingColors[$bucket] }}">
-                            ₱{{ number_format($amount, 0) }}
-                        </span>
-                    </div>
-                    <div class="progress-bar-track">
-                        <div class="progress-bar-fill" style="width: {{ $agingMax > 0 ? round(($amount/$agingMax)*100) : 0 }}%;
-                             background: {{ $agingColors[$bucket] }};"></div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        </div>
 
         {{-- Student Payment Status --}}
         <div class="section-card p-5">
@@ -234,18 +199,9 @@
     </div>
 
     {{-- Alerts --}}
-    @if($overdueCount > 0 || $pendingPayments > 0 || $onHoldCount > 0)
+    @if($pendingPayments > 0 || $onHoldCount > 0)
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 fade-up fade-up-d4">
-        @if($overdueCount > 0)
-        <a href="{{ route('treasurer.installments') }}"
-           class="flex items-center gap-3 p-4 rounded-2xl transition hover:opacity-90 bg-red-50 border border-red-100">
-            <span class="text-2xl">🚨</span>
-            <div>
-                <p class="text-sm font-bold text-red-600">{{ $overdueCount }} Overdue Installments</p>
-                <p class="text-xs text-gray-400">Students past due date</p>
-            </div>
-        </a>
-        @endif
+        
         @if($pendingPayments > 0)
         <a href="{{ route('treasurer.payments') }}?status=pending"
            class="flex items-center gap-3 p-4 rounded-2xl transition hover:opacity-90 bg-amber-50 border border-amber-100">

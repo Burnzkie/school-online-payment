@@ -305,9 +305,10 @@
                 @endif
                 <span class="hidden sm:block text-gray-700">{{ auth()->user()->name }}</span>
             </a>
-            <form method="POST" action="{{ route('logout') }}">
+            <form method="POST" action="{{ route('logout') }}" id="logout-form">
                 @csrf
                 <button type="submit"
+                        onclick="return confirm('Are you sure you want to log out?')"
                         class="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
                         title="Logout">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,12 +380,12 @@
 
                 @yield('content')
             </div>
+
+            <footer class="py-3 text-center text-xs bg-white border-t border-gray-100 text-gray-300">
+                © {{ date('Y') }} PAC &nbsp;·&nbsp; Treasurer Finance Portal
+            </footer>
         </main>
     </div>
-
-    <footer class="py-3 text-center text-xs bg-white border-t border-gray-100 text-gray-300">
-        © {{ date('Y') }} PAC &nbsp;·&nbsp; Treasurer Finance Portal
-    </footer>
 
     @stack('scripts')
 </body>

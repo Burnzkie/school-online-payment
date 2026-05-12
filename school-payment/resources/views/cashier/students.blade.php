@@ -87,7 +87,7 @@
                 <tbody>
                     @forelse($students ?? [] as $student)
                     @php
-                        $sy = date('Y').'-'.(date('Y')+1);
+                        $sy = date('n') >= 8 ? date('Y').'-'.(date('Y')+1) : (date('Y')-1).'-'.date('Y');
                         $totalFees = $student->fees()->where('school_year', $sy)->where('status', 'active')->sum('amount');
                         $totalPaid = $student->payments()->where('school_year', $sy)->where('status', 'completed')->sum('amount');
                         $balance   = max(0, $totalFees - $totalPaid);

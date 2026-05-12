@@ -292,7 +292,6 @@
                             🎓
                         </div>
                         <div class="hidden sm:block">
-                            <p class="font-bold text-base leading-none tracking-tight" style="color: var(--text)">PAC Payment</p>
                             <p class="text-[10px] font-semibold mt-0.5" style="color: var(--primary)">College Portal</p>
                         </div>
                     </div>
@@ -471,7 +470,7 @@
                     @endif
                     <div class="min-w-0">
                         <p class="font-bold text-sm leading-tight truncate" style="color: var(--text)">{{ $user->name ?? 'Student' }}</p>
-                        <p class="text-xs font-semibold mt-0.5" style="color: var(--primary)">{{ $user->student_id ?? 'College Portal' }}</p>
+                        <p class="text-xs font-semibold mt-0.5" style="color: var(--primary)">{{ $user->student_id ?? '' }}</p>
                     </div>
                 </div>
                 <div class="mt-3 pt-3" style="border-top: 1px solid var(--primary-border)">
@@ -549,7 +548,7 @@
 
     <!-- Footer -->
     <footer class="py-4 text-center text-xs col-footer">
-        © {{ date('Y') }} PAC &nbsp;·&nbsp; College Student Payment Portal
+        © {{ date('Y') }} PAC &nbsp;·&nbsp; College Student
     </footer>
 
     @stack('scripts')

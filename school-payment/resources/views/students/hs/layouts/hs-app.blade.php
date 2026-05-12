@@ -295,7 +295,6 @@
                             🎓
                         </div>
                         <div class="hidden sm:block">
-                            <p class="font-display text-base leading-none tracking-wide" style="color: var(--text)">PAC Portal</p>
                             <p class="text-[10px] font-semibold mt-0.5" style="color: var(--accent);">{{ $levelLabel }} School</p>
                         </div>
                     </div>
