@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
 
@@ -45,7 +47,7 @@ class User extends Authenticatable
         'municipality',
         'city',
 
-        // Parent Information on student records
+        // Parent / Guardian contacts (stored on student records)
         'father_name',
         'father_occupation',
         'father_contact',
@@ -56,17 +58,17 @@ class User extends Authenticatable
         'guardian_relationship',
         'guardian_contact',
 
-        // Extra info for non-student roles
+        // Miscellaneous
         'extra_info',
         'profile_picture',
+        'dark_mode',
 
-        // Student drop / status fields
-        'status',           // 'active' | 'dropped'
+        // Student status / drop fields
+        'status',            // 'active' | 'dropped'
         'drop_reason',
         'drop_notes',
         'dropped_at',
         'dropped_by_name',
-        'dark_mode',
     ];
 
     protected $hidden = [
@@ -80,10 +82,50 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'birth_date'        => 'date',
-            'age'               => 'integer',
             'dropped_at'        => 'datetime',
+            'age'               => 'integer',
             'dark_mode'         => 'boolean',
         ];
+    }
+
+    // =========================================================================
+    // Query Scopes
+    // =========================================================================
+
+    /** User::students()->get() */
+    public function scopeStudents(Builder $query): Builder
+    {
+        return $query->where('role', 'student');
+    }
+
+    /** User::parents()->get() */
+    public function scopeParents(Builder $query): Builder
+    {
+        return $query->where('role', 'parent');
+    }
+
+    /** User::treasurers()->get() */
+    public function scopeTreasurers(Builder $query): Builder
+    {
+        return $query->where('role', 'treasurer');
+    }
+
+    /** User::cashiers()->get() */
+    public function scopeCashiers(Builder $query): Builder
+    {
+        return $query->where('role', 'cashier');
+    }
+
+    /** User::students()->active()->get() */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 'active');
+    }
+
+    /** User::students()->dropped()->get() */
+    public function scopeDropped(Builder $query): Builder
+    {
+        return $query->where('status', 'dropped');
     }
 
     // =========================================================================
@@ -102,22 +144,7 @@ class User extends Authenticatable
         return $this->hasMany(Payment::class, 'student_id');
     }
 
-    /**
-     * Alias for payments() — used by the Treasurer portal filters.
-     * Keeps controller queries readable: $user->paymentsAs()->...
-     */
-    public function paymentsAs(): HasMany
-    {
-        return $this->hasMany(Payment::class, 'student_id');
-    }
-
-    /** Installment plans for this student. */
-    public function installmentPlans(): HasMany
-    {
-        return $this->hasMany(InstallmentPlan::class, 'student_id');
-    }
-
-    /** Payments processed by this cashier. */
+    /** Payments recorded/processed by this cashier. */
     public function processedPayments(): HasMany
     {
         return $this->hasMany(Payment::class, 'cashier_id');
@@ -131,16 +158,9 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
-    /** Notifications for this user. */
-    public function notifications(): HasMany
-    {
-        return $this->hasMany(Notification::class, 'user_id');
-    }
-
     /**
      * Students linked to this parent account.
-     * Reads from the parent_student pivot table.
-     * Use this on a User where role = 'parent'.
+     * Use on a User where role = 'parent'.
      */
     public function linkedStudents(): BelongsToMany
     {
@@ -154,7 +174,7 @@ class User extends Authenticatable
 
     /**
      * Parents linked to this student account.
-     * Use this on a User where role = 'student'.
+     * Use on a User where role = 'student'.
      */
     public function linkedParents(): BelongsToMany
     {
@@ -167,9 +187,10 @@ class User extends Authenticatable
     }
 
     // =========================================================================
-    // Helper Methods
+    // Accessors
     // =========================================================================
 
+    /** Full name with middle name, last name, and suffix. */
     public function getFullNameAttribute(): string
     {
         return implode(' ', array_filter([
@@ -180,9 +201,13 @@ class User extends Authenticatable
         ]));
     }
 
+    // =========================================================================
+    // Financial Helpers
+    // =========================================================================
+
     public function getTotalFeesForSemester(string $schoolYear, string $semester): float
     {
-        return $this->fees()
+        return (float) $this->fees()
             ->where('school_year', $schoolYear)
             ->where('semester', $semester)
             ->where('status', 'active')
@@ -191,7 +216,7 @@ class User extends Authenticatable
 
     public function getTotalPaymentsForSemester(string $schoolYear, string $semester): float
     {
-        return $this->payments()
+        return (float) $this->payments()
             ->where('school_year', $schoolYear)
             ->where('semester', $semester)
             ->where('status', 'completed')
@@ -200,14 +225,22 @@ class User extends Authenticatable
 
     public function getBalanceForSemester(string $schoolYear, string $semester): float
     {
-        return max(0,
+        return max(0.0,
             $this->getTotalFeesForSemester($schoolYear, $semester) -
             $this->getTotalPaymentsForSemester($schoolYear, $semester)
         );
     }
 
+    // =========================================================================
+    // Role & Status Helpers
+    // =========================================================================
+
     public function isStudent():   bool { return $this->role === 'student';   }
     public function isParent():    bool { return $this->role === 'parent';    }
     public function isTreasurer(): bool { return $this->role === 'treasurer'; }
     public function isCashier():   bool { return $this->role === 'cashier';   }
+
+    public function isVerified(): bool { return $this->email_verified_at !== null; }
+    public function isDropped():  bool { return $this->status === 'dropped';       }
+    public function isActive():   bool { return $this->status !== 'dropped';       }
 }

@@ -53,7 +53,7 @@
                         <option value="Kinder"       {{ old('level_group')=='Kinder'       ? 'selected':'' }}>Kinder</option>
                         <option value="Elementary"   {{ old('level_group')=='Elementary'   ? 'selected':'' }}>Elementary</option>
                         <option value="Junior High School"  {{ old('level_group')=='Junior High School'  ? 'selected':'' }}>Junior High School</option>
-                        <option value="Senior High"  {{ old('level_group')=='Senior High'  ? 'selected':'' }}>Senior High School</option>
+                        <option value="Senior High School"  {{ old('level_group')=='Senior High School'  ? 'selected':'' }}>Senior High School</option>
                         <option value="College"      {{ old('level_group')=='College'      ? 'selected':'' }}>College</option>
                     </select>
                 </div>
@@ -155,7 +155,7 @@ const yearLevelMap = {
     'Kinder':      ['Nursery', 'Kinder 1', 'Kinder 2'],
     'Elementary':  ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6'],
     'Junior High School': ['Grade 7','Grade 8','Grade 9','Grade 10'],
-    'Senior High': ['Grade 11','Grade 12'],
+    'Senior High School': ['Grade 11','Grade 12'],
     'College':     ['1st Year','2nd Year','3rd Year','4th Year','5th Year'],
 };
 const programsByDept = {
@@ -176,7 +176,7 @@ function handleLevelChange(level) {
     yearSel.innerHTML = '<option value="">— All Year Levels —</option>';
     if (!level) { hideCount(); return; }
     if (level === 'College') { collegeWrap.style.display = 'grid'; yearWrap.style.display = 'block'; }
-    else { yearWrap.style.display = 'block'; if (level === 'Senior High') strandWrap.style.display = 'block'; }
+    else { yearWrap.style.display = 'block'; if (level === 'Senior High School') strandWrap.style.display = 'block'; }
     (yearLevelMap[level] || []).forEach(yl => { const o = document.createElement('option'); o.value = yl; o.textContent = yl; yearSel.appendChild(o); });
     fetchCount();
 }

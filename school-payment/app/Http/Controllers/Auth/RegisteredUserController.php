@@ -162,7 +162,6 @@ class RegisteredUserController extends Controller
 
         // ── Students: send verification email, redirect to login with message ─
         if ($role === 'student') {
-            $user->sendEmailVerificationNotification();
             Auth::logout();
             return redirect()->route('register')
                 ->with('registration_success', true)

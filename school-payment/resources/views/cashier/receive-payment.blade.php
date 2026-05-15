@@ -139,28 +139,17 @@
                            class="c-input">
                 </div>
                 <div>
-                    <label class="rp-label">Payment Method *</label>
-                    <select name="payment_method" required class="c-input c-select">
-                        <option value="">Select method...</option>
-                        <option value="Cash"          {{ old('payment_method') === 'Cash'          ? 'selected' : '' }}>💵 Cash</option>
-                        <option value="GCash"         {{ old('payment_method') === 'GCash'         ? 'selected' : '' }}>📱 GCash</option>
-                        <option value="PayMaya"       {{ old('payment_method') === 'PayMaya'       ? 'selected' : '' }}>📱 PayMaya</option>
-                        <option value="Bank Transfer" {{ old('payment_method') === 'Bank Transfer' ? 'selected' : '' }}>🏦 Bank Transfer</option>
-                        <option value="Check"         {{ old('payment_method') === 'Check'         ? 'selected' : '' }}>📝 Check</option>
-                    </select>
+                    <label class="rp-label">Payment Method</label>
+                    <input type="hidden" name="payment_method" value="Cash">
+                    <div class="c-input bg-gray-50 text-gray-500 flex items-center gap-2 cursor-not-allowed select-none">
+                        💵 <span>Cash</span>
+                    </div>
                 </div>
                 <div>
                     <label class="rp-label">OR Number</label>
                     <input type="text" name="or_number"
                            value="{{ old('or_number') }}" placeholder="Official Receipt No."
                            class="c-input font-mono-num">
-                </div>
-                <div>
-                    <label class="rp-label">Reference Number</label>
-                    <input type="text" name="reference_number"
-                           value="{{ old('reference_number') }}"
-                           placeholder="Transaction ref (for digital payments)"
-                           class="c-input">
                 </div>
                 <div>
                     <label class="rp-label">School Year *</label>

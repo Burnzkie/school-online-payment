@@ -18,6 +18,10 @@ Route::middleware('guest')->group(function () {
 
 // ── Login (form lives inside register.blade.php via tabs) ─────────────────────
 Route::middleware('guest')->group(function () {
+    Route::get('login', function () {
+        return redirect()->route('register');
+    })->name('login.show');
+    
     Route::post('login', [AuthenticatedSessionController::class, 'store'])
         ->name('login');
 });
