@@ -50,12 +50,7 @@
     <a href="{{ route('admin.payments') }}" class="a-btn-secondary">Reset</a>
 </form>
 
-@if($totalAmount > 0)
-<div class="px-5 py-3 rounded-xl a-fade a-d2 bg-indigo-50 border border-indigo-200">
-    <span class="text-sm font-semibold text-indigo-600">Filtered total (completed): </span>
-    <span class="font-bold text-gray-800 font-mono-num">₱{{ number_format($totalAmount,2) }}</span>
-</div>
-@endif
+
 
 <div class="a-card a-fade a-d3">
     <div class="overflow-x-auto">
